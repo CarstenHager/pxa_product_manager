@@ -37,7 +37,11 @@ class ProductItemsProcFunc extends GeneralItemsProcFunc
             'attributes'
         );
 
-        foreach ($configuration['row']['attribute_sets'] as $attributeSetId) {
+        $attributeSets = $configuration['row']['attribute_sets'] ?? [];
+        if (!is_array($attributeSets)) {
+            $attributeSets = GeneralUtility::intExplode(',', (string)$attributeSets, true);
+        }
+        foreach ($attributeSets as $attributeSetId) {
             /** @var RelationHandler $relationHandler */
             $relationHandler = GeneralUtility::makeInstance(RelationHandler::class);
             $relationHandler->start(
@@ -49,18 +53,13 @@ class ProductItemsProcFunc extends GeneralItemsProcFunc
                 $attributesFieldTca
             );
 
-            if ($relationHandler->getFromDB()[AttributeRepository::TABLE_NAME] !== null) {
-                $attributeIds = array_column($relationHandler->getFromDB()[AttributeRepository::TABLE_NAME], 'uid');
-
-                foreach ($attributeIds as $attributeId) {
-                    $attribute = BackendUtility::getRecord(AttributeRepository::TABLE_NAME, $attributeId);
-
-                    $configuration['items'][] = [
-                        $attribute['label'],
-                        'attribute.' . $attributeId,
-                        $GLOBALS['TCA'][AttributeRepository::TABLE_NAME]['ctrl']['iconfile'],
-                    ];
-                }
+            $records = $relationHandler->getFromDB()[AttributeRepository::TABLE_NAME] ?? [];
+            foreach ($records as $attribute) {
+                $fields['items'][] = [
+                    'label' => ($attribute['label'] ?? '') ?: ($attribute['name'] ?? ''),
+                    'value' => 'attribute.' . $attribute['uid'],
+                    'icon' => $GLOBALS['TCA'][AttributeRepository::TABLE_NAME]['ctrl']['iconfile'] ?? '',
+                ];
             }
         }
 

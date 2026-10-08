@@ -28,7 +28,6 @@ use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\Database\Query\QueryHelper;
 use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Persistence\Generic\Mapper\DataMapper;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Seo\XmlSitemap\AbstractXmlSitemapDataProvider;
@@ -64,12 +63,11 @@ final class ProductsXmlSitemapDataProvider extends AbstractXmlSitemapDataProvide
     ) {
         parent::__construct($request, $key, $config, $cObj);
 
-        $objectManager = GeneralUtility::makeInstance(ObjectManager::class);
 
-        $this->urlBuilder = $objectManager->get(UrlBuilderServiceInterface::class);
+        $this->urlBuilder = GeneralUtility::makeInstance(UrlBuilderServiceInterface::class);
         $this->urlBuilder->absolute(true);
 
-        $this->dataMapper = $objectManager->get(DataMapper::class);
+        $this->dataMapper = GeneralUtility::makeInstance(DataMapper::class);
 
         $this->generateItems();
     }
@@ -103,7 +101,7 @@ final class ProductsXmlSitemapDataProvider extends AbstractXmlSitemapDataProvide
         $sortField = $this->config['sortField'] ?? 'sorting';
 
         $rows = $queryBuilder->orderBy($sortField)
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         $lastModifiedField = $this->config['lastModifiedField'] ?? 'tstamp';

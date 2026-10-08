@@ -215,8 +215,8 @@ class PageLayoutView
                 'uid',
                 $queryBuilder->createNamedParameter($uids, Connection::PARAM_INT_ARRAY)
             ))
-            ->execute()
-            ->fetchAll(\PDO::FETCH_COLUMN);
+            ->executeQuery()
+            ->fetchFirstColumn();
 
         return is_array($rows) ? implode(', ', $rows) : '';
     }

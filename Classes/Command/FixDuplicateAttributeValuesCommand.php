@@ -53,8 +53,10 @@ class FixDuplicateAttributeValuesCommand extends Command
      * @param OutputInterface $output
      * @return int error code
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        \TYPO3\CMS\Core\Core\Bootstrap::initializeBackendAuthentication();
+        $GLOBALS['BE_USER']->initializeUserSessionManager();
         $io = new SymfonyStyle($input, $output);
         $io->title($this->getDescription());
 
@@ -200,7 +202,7 @@ class FixDuplicateAttributeValuesCommand extends Command
             )
             ->groupBy('product', 'attribute')
             ->having('cnt > 1')
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         return $records;
@@ -233,7 +235,7 @@ class FixDuplicateAttributeValuesCommand extends Command
                 )
             )
             ->orderBy('tstamp', 'DESC')
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         return $records;
@@ -261,7 +263,7 @@ class FixDuplicateAttributeValuesCommand extends Command
                 )
             )
             ->orderBy('crdate')
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         return $records[0] ?? [];
@@ -440,7 +442,7 @@ class FixDuplicateAttributeValuesCommand extends Command
                 'product_attributevalue',
                 self::RELATION_INDEX_TABLE,
                 'tprii',
-                (string)$queryBuilder->expr()->andX(
+                (string)$queryBuilder->expr()->and(
                     $queryBuilder->expr()->eq(
                         'tprii.uid_child',
                         $queryBuilder->quoteIdentifier('product_attributevalue.uid')
@@ -485,7 +487,7 @@ class FixDuplicateAttributeValuesCommand extends Command
                 )
             )
             ->orderBy('product_attributevalue.tstamp', 'DESC')
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         return $records;
@@ -512,7 +514,7 @@ class FixDuplicateAttributeValuesCommand extends Command
                 )
             )
             ->set('value', $value)
-            ->execute();
+            ->executeStatement();
     }
 
     /**
@@ -535,6 +537,6 @@ class FixDuplicateAttributeValuesCommand extends Command
                     $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT)
                 )
             )
-            ->execute();
+            ->executeStatement();
     }
 }

@@ -28,7 +28,7 @@ class LazyAvailableFiltersController extends AbstractBaseLazyLoadingController
      *
      * @param ProductDemand $demand
      */
-    public function listAction(ProductDemand $demand): void
+    public function listAction(ProductDemand $demand): \Psr\Http\Message\ResponseInterface
     {
         $this->queryDispatcher->prepareQuery($demand);
 
@@ -41,6 +41,7 @@ class LazyAvailableFiltersController extends AbstractBaseLazyLoadingController
 
         $this->view->setVariablesToRender(['response']);
         $this->view->assign('response', $response);
+        return $this->jsonResponse();
     }
 
     /**
@@ -66,13 +67,13 @@ class LazyAvailableFiltersController extends AbstractBaseLazyLoadingController
         ];
 
         // For each OR filter we need to get available options without this filter set
-        $orFilters = array_filter($demand->getFilters(), fn ($fd) => $fd['conjunction'] === Filter::CONJUNCTION_OR);
+        $orFilters = array_filter($demand->getFilters(), fn ($fd) => is_array($fd) && ($fd['conjunction'] ?? '') === Filter::CONJUNCTION_OR);
         foreach ($orFilters as $id => $data) {
             $customDemand = clone $demand;
             $customDemand->removeFilter($id);
 
             $this->queryDispatcher->prepareQuery($customDemand);
-            if ((int)$data['type'] === Filter::TYPE_CATEGORIES) {
+            if ((int)($data['type'] ?? 0) === Filter::TYPE_CATEGORIES) {
                 $options[$id] = $this->queryDispatcher->availableCategories();
             } else {
                 $options[$id] = $this->queryDispatcher->availableFilterOptions();

@@ -7,7 +7,6 @@ namespace Pixelant\PxaProductManager\UserFunction\Solr;
 use Pixelant\PxaProductManager\Domain\Model\Product;
 use Pixelant\PxaProductManager\Service\Url\UrlBuilderServiceInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Persistence\Generic\Mapper\DataMapper;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 
@@ -23,18 +22,14 @@ class Url
      */
     protected UrlBuilderServiceInterface $urlBuilder;
 
-    /**
-     * @var ObjectManager
-     */
-    protected ObjectManager $objectManager;
 
     /**
      * Init.
      */
     public function __construct()
     {
-        $this->objectManager = GeneralUtility::makeInstance(ObjectManager::class);
-        $this->urlBuilder = $this->objectManager->get(UrlBuilderServiceInterface::class);
+
+        $this->urlBuilder = GeneralUtility::makeInstance(UrlBuilderServiceInterface::class);
     }
 
     /**
@@ -61,7 +56,7 @@ class Url
      */
     protected function mapProduct(): ?Product
     {
-        $dataMapper = $this->objectManager->get(DataMapper::class);
+        $dataMapper = GeneralUtility::makeInstance(DataMapper::class);
 
         return $dataMapper->map(Product::class, [$this->cObj->data])[0] ?? null;
     }

@@ -105,7 +105,7 @@ class RelationInheritanceIndexUtility
                     'attrval_parent.product'
                 ),
             )
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         if (is_array($result)) {
@@ -146,7 +146,7 @@ class RelationInheritanceIndexUtility
                     $queryBuilder->createNamedParameter(ProductRepository::TABLE_NAME)
                 )
             )
-            ->execute();
+            ->executeStatement();
     }
 
     /**

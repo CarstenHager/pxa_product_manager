@@ -65,16 +65,9 @@ class ProductRepository extends AbstractDemandRepository
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
             ->getQueryBuilderForTable(self::TABLE_NAME);
 
-        $selectFields = [
-            self::TABLE_NAME . '.uid',
-            self::TABLE_NAME . '.name',
-            self::TABLE_NAME . '.teaser',
-            self::TABLE_NAME . '.sku',
-            self::TABLE_NAME . '.price',
-            self::TABLE_NAME . '.singleview_page',
-            self::TABLE_NAME . '.images',
-            self::TABLE_NAME . '.product_type',
-        ];
+        $queryBuilder->setRestrictions(GeneralUtility::makeInstance(\TYPO3\CMS\Core\Database\Query\Restriction\FrontendRestrictionContainer::class));
+
+        $selectFields = [self::TABLE_NAME . '.*'];
 
         $selectFields = $this->addAdditionalSelectFields($selectFields);
 
@@ -94,6 +87,8 @@ class ProductRepository extends AbstractDemandRepository
         $this->addOffset($queryBuilder, $demand);
 
         $this->addLanguageRestriction($queryBuilder);
+
+        $this->addOrderings($queryBuilder, $demand);
 
         $this->demandService->getSortBy([
             'tx_pxaproductmanager_domain_model_product' => 'tx_pxaproductmanager_domain_model_product',
@@ -115,7 +110,11 @@ class ProductRepository extends AbstractDemandRepository
     {
         $pageTreeStartingPoint = $demand->getPageTreeStartingPoint();
         if ($pageTreeStartingPoint) {
-            $pids = $GLOBALS['TSFE']->cObj->getTreeList($pageTreeStartingPoint * -1, 5);
+            $contentObject = GeneralUtility::makeInstance(\TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::class);
+            if (($GLOBALS['TYPO3_REQUEST'] ?? null) instanceof \Psr\Http\Message\ServerRequestInterface) {
+                $contentObject->setRequest($GLOBALS['TYPO3_REQUEST']);
+            }
+            $pids = $contentObject->getTreeList($pageTreeStartingPoint * -1, 5);
             $singleViewPages = GeneralUtility::intExplode(',', $pids, true);
 
             $queryBuilder->andWhere(
@@ -185,23 +184,23 @@ class ProductRepository extends AbstractDemandRepository
         $expressionBuilder = $queryBuilder->expr();
 
         if ($conjunction === 'and') {
-            $function = 'andX';
+            $function = 'and';
         } else {
-            $function = 'orX';
+            $function = 'or';
         }
 
         $conditions = $expressionBuilder->{$function}();
 
         foreach ($values as $value) {
-            $conditions->add(
-                $expressionBuilder->orX(
+            $conditions = $conditions->with(
+                $expressionBuilder->or(
                     $expressionBuilder->eq(
                         'tpdmav.value',
                         $parentQueryBuilder->createNamedParameter($value, \PDO::PARAM_INT)
                     ),
                     $expressionBuilder->inSet(
                         'tpdmav.value',
-                        $parentQueryBuilder->createNamedParameter($value, \PDO::PARAM_STR)
+                        $expressionBuilder->literal((string)(int)$value)
                     )
                 )
             );
@@ -245,61 +244,19 @@ class ProductRepository extends AbstractDemandRepository
         QueryBuilder $parentQueryBuilder,
         string $conjunction
     ): string {
-        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-            ->getQueryBuilderForTable('sys_category');
-
-        $expressionBuilder = $queryBuilder->expr();
-
-        if ($conjunction === 'and') {
-            $function = 'andX';
-        } else {
-            $function = 'orX';
-        }
-
-        $conditions = $expressionBuilder->{$function}();
-
-        foreach ($values as $value) {
-            $conditions->add(
-                $expressionBuilder->eq(
-                    'sc.uid',
-                    $parentQueryBuilder->createNamedParameter((int)$value, \PDO::PARAM_INT)
-                )
-            );
-        }
-
-        $subQuery = $queryBuilder->select('scrm.uid_foreign')
-            ->from('sys_category', 'sc')
-            ->join(
-                'sc',
-                'sys_category_record_mm',
-                'scrm',
-                $queryBuilder->expr()->eq(
-                    'scrm.uid_local',
-                    $queryBuilder->quoteIdentifier('sc.uid')
-                )
-            )
+        $values = array_values(array_unique(array_map('intval', (array)$values)));
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('sys_category');
+        $queryBuilder->select('scrm.uid_foreign')->from('sys_category', 'sc')
+            ->join('sc', 'sys_category_record_mm', 'scrm', $queryBuilder->expr()->eq('scrm.uid_local', $queryBuilder->quoteIdentifier('sc.uid')))
             ->where(
-                $conditions
-            )
-            ->andWhere(
-                $queryBuilder->expr()->eq(
-                    'scrm.tablenames',
-                    $parentQueryBuilder->createNamedParameter(
-                        self::TABLE_NAME,
-                        \PDO::PARAM_STR
-                    )
-                ),
-                $queryBuilder->expr()->eq(
-                    'scrm.fieldname',
-                    $parentQueryBuilder->createNamedParameter(
-                        'categories',
-                        \PDO::PARAM_STR
-                    )
-                )
-            )
-            ->groupBy('scrm.uid_foreign');
-
-        return $subQuery->getSQL();
+                $queryBuilder->expr()->in('sc.uid', $parentQueryBuilder->createNamedParameter($values, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)),
+                $queryBuilder->expr()->eq('scrm.tablenames', $parentQueryBuilder->createNamedParameter(self::TABLE_NAME)),
+                $queryBuilder->expr()->eq('scrm.fieldname', $parentQueryBuilder->createNamedParameter('categories'))
+            )->groupBy('scrm.uid_foreign');
+        if ($conjunction === 'and' && $values !== []) {
+            $queryBuilder->having('COUNT(DISTINCT scrm.uid_local) = ' . count($values));
+        }
+        return $queryBuilder->getSQL();
     }
 
     /**
@@ -319,9 +276,9 @@ class ProductRepository extends AbstractDemandRepository
         $conjunction = $demand->getFilterConjunction();
 
         if ($conjunction === 'and') {
-            $function = 'andX';
+            $function = 'and';
         } else {
-            $function = 'orX';
+            $function = 'or';
         }
 
         $expressionBuilder = $queryBuilder->expr();
@@ -329,28 +286,37 @@ class ProductRepository extends AbstractDemandRepository
         $conditions = $expressionBuilder->{$function}();
 
         foreach ($filters as $filterData) {
+            if (!is_array($filterData) || !isset($filterData['type'], $filterData['value'])
+                || !is_array($filterData['value'])) {
+                $queryBuilder->andWhere('1=0');
+                continue;
+            }
             $type = (int)$filterData['type'];
-            $conjunction = $filterData['conjunction'];
+            $conjunction = ($filterData['conjunction'] ?? 'and') === 'or' ? 'or' : 'and';
             $value = $filterData['value'];
 
             if ($type === Filter::TYPE_CATEGORIES) {
-                $conditions->add(
+                $conditions = $conditions->with(
                     $queryBuilder->expr()->in(
                         'uid',
-                        $this->getCategoriesSubQuery((int)$filterData['attribute'], $value, $queryBuilder, $conjunction)
+                        $this->getCategoriesSubQuery((int)($filterData['attribute'] ?? 0), $value, $queryBuilder, $conjunction)
                     )
                 );
             } elseif ($type === Filter::TYPE_ATTRIBUTES) {
-                $conditions->add(
+                $conditions = $conditions->with(
                     $queryBuilder->expr()->in(
                         'uid',
-                        $this->getAttributeSubQuery((int)$filterData['attribute'], $value, $queryBuilder, $conjunction)
+                        $this->getAttributeSubQuery((int)($filterData['attribute'] ?? 0), $value, $queryBuilder, $conjunction)
                     )
                 );
+            } else {
+                $queryBuilder->andWhere('1=0');
             }
         }
 
-        $queryBuilder->andWhere($conditions);
+        if (count($conditions) > 0) {
+            $queryBuilder->andWhere($conditions);
+        }
     }
 
     /**

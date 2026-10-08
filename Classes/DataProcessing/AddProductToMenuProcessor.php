@@ -43,7 +43,7 @@ class AddProductToMenuProcessor implements DataProcessorInterface
         array $processorConfiguration,
         array $processedData
     ): array {
-        if (!$processorConfiguration['menus']) {
+        if (empty($processorConfiguration['menus'])) {
             return $processedData;
         }
         $productRecord = $this->getProductRecord();
@@ -90,8 +90,9 @@ class AddProductToMenuProcessor implements DataProcessorInterface
     protected function getProductRecord(): array
     {
         $productId = 0;
-        $productShowVars = GeneralUtility::_GET('tx_pxaproductmanager_productshow') ?? [];
-        $productRenderVars = GeneralUtility::_GET('tx_pxaproductmanager_productrender') ?? [];
+        $query = ($GLOBALS['TYPO3_REQUEST'] ?? null)?->getQueryParams() ?? [];
+        $productShowVars = (array)($query['tx_pxaproductmanager_productshow'] ?? []);
+        $productRenderVars = (array)($query['tx_pxaproductmanager_productrender'] ?? []);
         $vars = array_merge($productShowVars, $productRenderVars);
 
         if (isset($vars['product'])) {
@@ -107,7 +108,7 @@ class AddProductToMenuProcessor implements DataProcessorInterface
                 ->where(
                     $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($productId, \PDO::PARAM_INT))
                 )
-                ->execute()
+                ->executeQuery()
                 ->fetchAssociative();
 
             if ($row) {

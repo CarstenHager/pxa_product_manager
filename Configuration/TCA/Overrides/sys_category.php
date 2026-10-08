@@ -1,6 +1,6 @@
 <?php
 
-defined('TYPO3_MODE') || die;
+defined('TYPO3') || die;
 
 (function (): void {
     $ll = 'LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_db.xlf:';

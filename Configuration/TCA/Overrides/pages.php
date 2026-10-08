@@ -1,6 +1,6 @@
 <?php
 
-defined('TYPO3_MODE') || die;
+defined('TYPO3') || die;
 
 (function (): void {
     $pdDokType = \Pixelant\PxaProductManager\Domain\Repository\PageRepository::DOKTYPE_PRODUCT_DISPLAY;

@@ -62,8 +62,11 @@ class UpdateInheritanceCommand extends Command
      * @param OutputInterface $output
      * @return int error code
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        \TYPO3\CMS\Core\Core\Bootstrap::initializeBackendAuthentication();
+        // FormEngine relation providers read clipboard/session state, even in CLI.
+        $GLOBALS['BE_USER']->initializeUserSessionManager();
         $io = new SymfonyStyle($input, $output);
         $io->title($this->getDescription());
 
@@ -77,7 +80,7 @@ class UpdateInheritanceCommand extends Command
         if (empty($products)) {
             $io->success('No products in queue, no processing needed.');
 
-            return true;
+            return Command::SUCCESS;
         }
 
         $queueCount = $this->fetchInheritanceQueueCount();
@@ -100,9 +103,13 @@ class UpdateInheritanceCommand extends Command
 
             if (!empty($inheritedData)) {
                 $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-                $dataHandler->start($inheritedData['data'], $inheritedData['cmd']);
+                $dataHandler->start($inheritedData['data'] ?? [], $inheritedData['cmd'] ?? []);
                 $dataHandler->process_datamap();
                 $dataHandler->process_cmdmap();
+                if ($dataHandler->errorLog !== []) {
+                    $io->error(implode(PHP_EOL, $dataHandler->errorLog));
+                    return Command::FAILURE;
+                }
             }
 
             if (
@@ -130,7 +137,7 @@ class UpdateInheritanceCommand extends Command
             )
         );
 
-        return true;
+        return Command::SUCCESS;
     }
 
     /**
@@ -154,7 +161,7 @@ class UpdateInheritanceCommand extends Command
                 )
             )
             ->orderBy('tstamp', 'DESC')
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         return $records ?? [];
@@ -202,7 +209,7 @@ class UpdateInheritanceCommand extends Command
                     $queryBuilder->createNamedParameter('', \PDO::PARAM_STR)
                 )
             )
-            ->execute()
+            ->executeQuery()
             ->fetchOne();
     }
 
@@ -232,7 +239,7 @@ class UpdateInheritanceCommand extends Command
                 )
             )
             ->setMaxResults($limit)
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
     }
 
@@ -249,7 +256,7 @@ class UpdateInheritanceCommand extends Command
         $queryBuilder->getRestrictions()->removeAll();
 
         $queryBuilder->delete(InheritanceQueueRepository::TABLE_NAME)
-            ->execute();
+            ->executeStatement();
     }
 
     /**
@@ -271,7 +278,7 @@ class UpdateInheritanceCommand extends Command
                 'indexed' => 0,
                 'errors' => '',
             ])
-            ->execute();
+            ->executeStatement();
     }
 
     /**
@@ -294,6 +301,6 @@ class UpdateInheritanceCommand extends Command
                     $queryBuilder->createNamedParameter($product_uid, \PDO::PARAM_INT)
                 ),
             )
-            ->execute();
+            ->executeStatement();
     }
 }

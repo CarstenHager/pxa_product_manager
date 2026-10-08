@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Controller;
 
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use Pixelant\PxaProductManager\Domain\Repository\CategoryRepository;
 use Pixelant\PxaProductManager\Service\NavigationService;
 
@@ -28,9 +29,10 @@ class CategoryController extends AbstractController
     /**
      * List navigation.
      */
-    public function listAction(): void
+    public function listAction(): \Psr\Http\Message\ResponseInterface
     {
         $this->view->assign('items', $this->getNavigationService()->getItems());
+        return $this->htmlResponse();
     }
 
     /**
@@ -42,9 +44,9 @@ class CategoryController extends AbstractController
     {
         $demand = $this->createCategoriesDemand($this->settings);
 
-        $service = $this->objectManager->get(
+        $service = GeneralUtility::makeInstance(
             NavigationService::class,
-            $this->categoryRepository->findByUid((int)$this->settings['list']['entryNavigationCategory']),
+            $this->categoryRepository->findByUid((int)($this->settings['list']['entryNavigationCategory'] ?? 0)),
             $demand
         );
         if (!empty($this->settings['navigation']['expandAll'])) {

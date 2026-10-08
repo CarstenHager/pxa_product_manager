@@ -65,7 +65,7 @@ class AttributeValueRepository extends Repository
                 )
             )
             ->where(
-                $queryBuilder->expr()->in('attributevalue.product', "(${subQuery})"),
+                $queryBuilder->expr()->in('attributevalue.product', $subQuery),
                 $queryBuilder->expr()->in(
                     'attributes.type',
                     $queryBuilder->createNamedParameter(
@@ -75,8 +75,8 @@ class AttributeValueRepository extends Repository
                 )
             )
             ->groupBy('attributevalue.value')
-            ->execute()
-            ->fetchAll(\PDO::FETCH_COLUMN);
+            ->executeQuery()
+            ->fetchFirstColumn();
     }
 
     /**
@@ -100,8 +100,8 @@ class AttributeValueRepository extends Repository
                 $expr->eq('attribute', $queryBuilder->createNamedParameter($attributeUid, \PDO::PARAM_INT))
             )
             ->setMaxResults(1)
-            ->execute()
-            ->fetch();
+            ->executeQuery()
+            ->fetchAssociative();
 
         return is_array($row) ? $row : null;
     }
@@ -135,8 +135,8 @@ class AttributeValueRepository extends Repository
                     $queryBuilder->createNamedParameter($identifier, \PDO::PARAM_STR)
                 )
             )
-            ->execute()
-            ->fetch();
+            ->executeQuery()
+            ->fetchAssociative();
 
         return is_array($row) ? $row : null;
     }

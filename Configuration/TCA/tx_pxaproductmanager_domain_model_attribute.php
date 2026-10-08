@@ -1,6 +1,6 @@
 <?php
 
-defined('TYPO3_MODE') || die;
+defined('TYPO3') || die;
 
 return (function () {
     $ll = 'LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_db.xlf:';
@@ -340,7 +340,6 @@ return (function () {
                         'foreign_match_fields' => [
                             'fieldname' => 'image',
                             'tablenames' => 'tx_pxaproductmanager_domain_model_attribute',
-                            'table_local' => 'sys_file',
                         ],
                         'maxitems' => 1,
                         // @codingStandardsIgnoreStart

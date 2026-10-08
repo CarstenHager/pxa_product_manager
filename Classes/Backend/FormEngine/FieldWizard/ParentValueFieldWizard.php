@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Backend\FormEngine\FieldWizard;
 
+use Pixelant\PxaProductManager\Utility\TcaUtility;
 use Pixelant\PxaProductManager\Domain\Repository\AttributeValueRepository;
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
 use Pixelant\PxaProductManager\Utility\AttributeUtility;
@@ -42,7 +43,7 @@ class ParentValueFieldWizard extends AbstractNode
             $record = $this->data['databaseRow'];
             $parentRecord = AttributeUtility::findAttributeValue(
                 (int)$record['product'],
-                (int)$record['attribute'][0]['uid']
+                (int)TcaUtility::getAttributeUid($record['attribute'] ?? 0)
             );
         } else {
             return $result;

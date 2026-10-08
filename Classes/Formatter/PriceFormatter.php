@@ -39,7 +39,7 @@ class PriceFormatter implements SingletonInterface
     /**
      * @var ServerRequest
      */
-    protected ServerRequest $request;
+    protected ?\Psr\Http\Message\ServerRequestInterface $request = null;
 
     /**
      * @var EventDispatcherInterface
@@ -51,7 +51,7 @@ class PriceFormatter implements SingletonInterface
      */
     public function __construct(ServerRequest $request = null)
     {
-        $this->request = $request ?? $GLOBALS['TYPO3_REQUEST'];
+        $this->request = $request ?? ($GLOBALS['TYPO3_REQUEST'] ?? null);
     }
 
     /**
@@ -82,7 +82,7 @@ class PriceFormatter implements SingletonInterface
             $this->setCurrency($settings['price']['currency']);
         }
 
-        if (is_numeric($settings['price']['fractionDigits'])) {
+        if (is_numeric($settings['price']['fractionDigits'] ?? null)) {
             $this->setFractionDigits((int)$settings['price']['fractionDigits']);
         }
     }
@@ -102,6 +102,7 @@ class PriceFormatter implements SingletonInterface
         string $currency = null,
         int $fractionDigits = null
     ): string {
+        $this->setLocaleFromRequest();
         $locale ??= $this->getLocale();
         $currency ??= $this->getCurrency();
         $fractionDigits ??= $this->getFractionDigits();
@@ -134,9 +135,10 @@ class PriceFormatter implements SingletonInterface
      */
     protected function setLocaleFromRequest(): void
     {
-        $siteLanguage = $this->request->getAttribute('language', null);
+        $request = $GLOBALS['TYPO3_REQUEST'] ?? $this->request;
+        $siteLanguage = $request?->getAttribute('language');
         if ($siteLanguage instanceof SiteLanguage) {
-            [$this->locale] = explode('.', $siteLanguage->getLocale());
+            $this->locale = $siteLanguage->getLocale()->getName();
         }
     }
 

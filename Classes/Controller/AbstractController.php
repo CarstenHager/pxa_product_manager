@@ -14,9 +14,8 @@ use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\Exception\MissingArrayPathException;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
-use TYPO3\CMS\Extbase\Mvc\View\ViewInterface;
+use TYPO3Fluid\Fluid\View\ViewInterface;
 use TYPO3\CMS\Extbase\Persistence\Repository;
-use TYPO3\CMS\Extbase\SignalSlot\Dispatcher;
 use TYPO3\CMS\Extbase\Utility\LocalizationUtility;
 
 abstract class AbstractController extends ActionController
@@ -36,16 +35,12 @@ abstract class AbstractController extends ActionController
         $this->siteSettings = $settingsReader;
     }
 
-    /**
-     * @var Dispatcher
-     */
-    protected Dispatcher $dispatcher;
 
     /**
      * Override plugin settings with site settings, before resolving view.
      * @return ViewInterface
      */
-    protected function resolveView()
+    protected function resolveView(): ViewInterface
     {
         $singleViewPid = $this->siteSettings->getValue('singleViewPid');
         if ($singleViewPid) {
@@ -55,13 +50,6 @@ abstract class AbstractController extends ActionController
         return parent::resolveView();
     }
 
-    /**
-     * @param Dispatcher $dispatcher
-     */
-    public function injectDispatcher(Dispatcher $dispatcher): void
-    {
-        $this->dispatcher = $dispatcher;
-    }
 
     /**
      * Find records using repository by uids list.
@@ -112,7 +100,7 @@ abstract class AbstractController extends ActionController
             $demand->setOrderDirection($settings['orderDirection']);
         }
 
-        $this->dispatcher->dispatch(__CLASS__, 'AfterDemandCreationBeforeReturn', [$demand, $settings]);
+        $this->eventDispatcher->dispatch(new \Pixelant\PxaProductManager\Event\Controller\AfterDemandCreationEvent($demand, $settings));
 
         return $demand;
     }
@@ -128,7 +116,7 @@ abstract class AbstractController extends ActionController
         array $settings,
         string $className = CategoryDemand::class
     ): DemandInterface {
-        $settings = array_merge($settings, $this->settings['categoriesOrderings'] ?? []);
+        $settings = array_merge($settings, (array)($this->settings['categoriesOrderings'] ?? []));
         $className = $this->readFromSettings('demand.objects.categoryDemand', $className);
 
         $demand = $this->createDemandFromSettings($settings, $className);
@@ -156,7 +144,7 @@ abstract class AbstractController extends ActionController
         array $settings,
         string $className = ProductDemand::class
     ): DemandInterface {
-        $settings = array_merge($settings, $this->settings['productOrderings'] ?? []);
+        $settings = array_merge($settings, (array)($this->settings['productOrderings'] ?? []));
         $className = $this->readFromSettings('demand.objects.productDemand', $className);
 
         $demand = $this->createDemandFromSettings($settings, $className);
@@ -167,7 +155,7 @@ abstract class AbstractController extends ActionController
             $demand->setCategoryConjunction($settings['categoryConjunction']);
         }
         $demand->setPageTreeStartingPoint(
-            (int)$settings['pageTreeStartingPoint'] ?? $this->getTypoScriptFrontendController()->id
+            (int)($settings['pageTreeStartingPoint'] ?? $this->getTypoScriptFrontendController()->id)
         );
 
         return $demand;
@@ -181,10 +169,18 @@ abstract class AbstractController extends ActionController
     protected function createOrderByArray()
     {
         $orderBy = [];
-        $listOrderBy = $this->settings['listView']['orderBy'];
+        $listOrderBy = $this->settings['listView']['orderBy'] ?? [];
+        if (!is_array($listOrderBy)) {
+            return [];
+        }
 
         foreach ($listOrderBy as $listOrderByItem) {
-            $text = LocalizationUtility::translate($listOrderByItem['key'], 'PxaProductManager');
+            if (!is_array($listOrderByItem) || !is_string($listOrderByItem['value'] ?? null)) {
+                continue;
+            }
+            $key = (string)($listOrderByItem['key'] ?? '');
+            $text = $key !== '' ? LocalizationUtility::translate($key, 'PxaProductManager') : null;
+            $text ??= $listOrderByItem['value'];
             $orderBy[] = [
                 'value' => $listOrderByItem['value'],
                 'text' => $text,
@@ -192,6 +188,18 @@ abstract class AbstractController extends ActionController
         }
 
         return $orderBy;
+    }
+
+    /** Default pagination also applies to content elements without a FlexForm. */
+    protected function getListLimit(): int
+    {
+        return max(0, (int)($this->settings['limit'] ?? $this->settings['listView']['limit'] ?? 12));
+    }
+
+    protected function getProductOrderings(): array
+    {
+        $orderings = $this->settings['productOrderings'] ?? [];
+        return (is_array($orderings) ? $orderings : []) + ['orderBy' => 'name', 'orderDirection' => 'asc'];
     }
 
     /**
@@ -229,7 +237,7 @@ abstract class AbstractController extends ActionController
      */
     protected function getMenuLevels(): int
     {
-        return (int)$this->settings['menuLevels'] ?? 0;
+        return (int)($this->settings['menuLevels'] ?? 0);
     }
 
     /**
@@ -239,7 +247,7 @@ abstract class AbstractController extends ActionController
      */
     protected function getListViewMenuLevels(): int
     {
-        return (int)$this->settings['listView']['menuLevels'] ?? 0;
+        return (int)($this->settings['listView']['menuLevels'] ?? 0);
     }
 
     /**
@@ -261,7 +269,7 @@ abstract class AbstractController extends ActionController
             $currentPageId = $this->getTypoScriptFrontendController()->id;
             $rootLine = $this->getTypoScriptFrontendController()->rootLine;
 
-            $fixedMenuPageId = (int)$this->settings['listView']['menuPageId'] ?? 0;
+            $fixedMenuPageId = (int)($this->settings['listView']['menuPageId'] ?? 0);
             if ($fixedMenuPageId > 0) {
                 $currentPageId = $fixedMenuPageId;
             }

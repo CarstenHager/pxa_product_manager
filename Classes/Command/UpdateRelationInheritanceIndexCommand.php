@@ -48,7 +48,7 @@ class UpdateRelationInheritanceIndexCommand extends Command
      * @param OutputInterface $output
      * @return int error code
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
         $io->title($this->getDescription());
@@ -70,7 +70,7 @@ class UpdateRelationInheritanceIndexCommand extends Command
             $io->success('No missing relations found');
         }
 
-        return true;
+        return Command::SUCCESS;
     }
 
     /**
@@ -94,7 +94,7 @@ class UpdateRelationInheritanceIndexCommand extends Command
                 'child_parent_id' => $record['child_parent_id'],
                 'child_parent_tablename' => $record['child_parent_tablename'],
             ])
-            ->execute();
+            ->executeStatement();
     }
 
     /**
@@ -133,7 +133,7 @@ class UpdateRelationInheritanceIndexCommand extends Command
                 'tpdmp',
                 self::ATTRIBUTEVALUE_TABLE,
                 'tpdmaparent',
-                (string)$queryBuilder->expr()->andX(
+                (string)$queryBuilder->expr()->and(
                     $queryBuilder->expr()->eq(
                         'tpdmaparent.product',
                         $queryBuilder->quoteIdentifier('tpdmp.parent')
@@ -148,7 +148,7 @@ class UpdateRelationInheritanceIndexCommand extends Command
                 'tpdma',
                 self::RELATION_INDEX_TABLE,
                 'tprii',
-                (string)$queryBuilder->expr()->andX(
+                (string)$queryBuilder->expr()->and(
                     $queryBuilder->expr()->eq(
                         'tprii.uid_child',
                         $queryBuilder->quoteIdentifier('tpdma.uid')
@@ -179,7 +179,7 @@ class UpdateRelationInheritanceIndexCommand extends Command
                 'tpdma.uid',
                 'tpdmaparent.uid'
             )
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         return $records;

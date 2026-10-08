@@ -23,7 +23,7 @@ class AttributeIdentifierControl extends AbstractNode
             'linkAttributes' => [
                 'class' => 'attributeIdentifier ',
             ],
-            'requireJsModules' => ['TYPO3/CMS/PxaProductManager/Backend/AttributeIdentifierControl'],
+            'javaScriptModules' => [\TYPO3\CMS\Core\Page\JavaScriptModuleInstruction::create('@pixelant/pxa-product-manager/backend/attribute-identifier.js')],
         ];
     }
 }

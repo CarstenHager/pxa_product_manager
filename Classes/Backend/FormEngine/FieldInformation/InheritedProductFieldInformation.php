@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Backend\FormEngine\FieldInformation;
 
+use Pixelant\PxaProductManager\Utility\TcaUtility;
 use Pixelant\PxaProductManager\Domain\Repository\AttributeValueRepository;
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
 use Pixelant\PxaProductManager\Utility\DataInheritanceUtility;
@@ -34,7 +35,7 @@ class InheritedProductFieldInformation extends AbstractNode
                 $attributeValue['product']
             );
 
-            $fieldName = 'attribute.' . $attributeValue['attribute'][0]['uid'];
+            $fieldName = 'attribute.' . TcaUtility::getAttributeUid($attributeValue['attribute'] ?? 0);
             $productType = $product['product_type'];
         } else {
             return $result;

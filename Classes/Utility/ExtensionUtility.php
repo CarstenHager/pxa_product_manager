@@ -37,7 +37,7 @@ class ExtensionUtility extends \TYPO3\CMS\Extbase\Utility\ExtensionUtility
 
         $classNameArray = explode('\\', $controllerClassName);
         $controller = end($classNameArray);
-        $controllerAlias = current(explode('Controller', $controller));
+        $controllerAlias = explode('Controller', $controller, 2)[0];
 
         $config['alias'] = $controllerAlias;
         $config['className'] = $controllerClassName;

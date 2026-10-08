@@ -79,21 +79,18 @@ abstract class AbstractProvider implements ProviderInterface
             'exclude' => false,
             'label' => '',
             'config' => [
-                'type' => 'input',
+                'type' => 'datetime',
+                'format' => 'datetime',
                 'default' => 0,
-                'renderType' => 'inputDateTime',
-                'eval' => 'datetime,int',
             ],
         ],
 
         Attribute::ATTRIBUTE_TYPE_LINK => [
             'exclude' => false,
             'config' => [
-                'type' => 'input',
+                'type' => 'link',
                 'size' => '30',
                 'max' => '256',
-                'eval' => 'trim',
-                'renderType' => 'inputLink',
                 'softref' => 'typolink',
             ],
         ],
@@ -153,7 +150,7 @@ abstract class AbstractProvider implements ProviderInterface
      */
     protected function isRequired(): bool
     {
-        return (bool)$this->attribute['required'];
+        return (bool)($this->attribute['required'] ?? false);
     }
 
     /**

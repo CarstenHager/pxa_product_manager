@@ -59,19 +59,20 @@ class ProductDisplayController extends AbstractController
      *
      * @return void
      */
-    public function listAction(): void
+    public function listAction(): \Psr\Http\Message\ResponseInterface
     {
         // die($this->settings);
         // Selected filters
-        $filters = $this->findRecordsByList($this->settings['filtering']['filters'], $this->filterRepository);
+        $filters = $this->findRecordsByList((string)($this->settings['filtering']['filters'] ?? ''), $this->filterRepository);
         // Selected categories
         $categories = $this->findRecordsByList(
-            $this->settings['lazyList']['entryCategories'],
+            (string)($this->settings['lazyList']['entryCategories'] ?? ''),
             $this->categoryRepository
         );
 
         $this->view->assign('filters', $filters);
         $this->view->assign('settingsJson', json_encode($this->lazyListSettings($categories)));
+        return $this->htmlResponse();
     }
 
     /**
@@ -84,11 +85,11 @@ class ProductDisplayController extends AbstractController
     {
         return [
             'storagePid' => $this->storagePid(),
-            'limit' => (int)$this->settings['limit'],
-            'filterConjunction' => $this->settings['filtering']['conjunction'],
-            'hideFilterOptionsNoResult' => (int)$this->settings['filtering']['hideFilterOptionsNoResult'],
+            'limit' => $this->getListLimit(),
+            'filterConjunction' => $this->settings['filtering']['conjunction'] ?? 'and',
+            'hideFilterOptionsNoResult' => (int)($this->settings['filtering']['hideFilterOptionsNoResult'] ?? 0),
             'categories' => $this->categoryTree->childrenIdsRecursiveAndCache($categories),
-        ] + $this->settings['productOrderings'];
+        ] + $this->getProductOrderings();
     }
 
     /**

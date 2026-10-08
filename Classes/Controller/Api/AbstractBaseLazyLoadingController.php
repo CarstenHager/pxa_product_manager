@@ -12,24 +12,21 @@ use TYPO3\CMS\Extbase\Property\PropertyMappingConfiguration;
 abstract class AbstractBaseLazyLoadingController extends ActionController
 {
     /**
-     * @var JsonView
-     */
-    protected $view;
-
-    /**
      * @var string
      */
-    protected $defaultViewObjectName = JsonView::class;
+
 
     /**
      * Initialize configuration.
      */
     public function initializeListAction(): void
     {
+        $this->defaultViewObjectName = JsonView::class;
         // Allow to create Demand from arguments
         $allowedProperties = GeneralUtility::trimExplode(
             ',',
             $this->settings['demand']['allowMappingProperties']
+                ?? 'offSet,categories,limit,filters,storagePid,orderDirection,orderBy,filterConjunction,hideFilterOptionsNoResult,pageTreeStartingPoint'
         );
 
         /** @var PropertyMappingConfiguration $demandConfiguration */

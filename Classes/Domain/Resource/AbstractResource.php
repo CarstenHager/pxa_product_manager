@@ -9,7 +9,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
 use TYPO3\CMS\Extbase\Persistence\ObjectStorage;
 use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
-use TYPO3\CMS\Extbase\SignalSlot\Dispatcher;
 
 /**
  * Base resource to array.
@@ -21,10 +20,6 @@ abstract class AbstractResource implements ResourceInterface
      */
     protected AbstractEntity $entity;
 
-    /**
-     * @var Dispatcher
-     */
-    protected Dispatcher $dispatcher;
 
     /**
      * @param AbstractEntity $entity
@@ -34,13 +29,6 @@ abstract class AbstractResource implements ResourceInterface
         $this->entity = $entity;
     }
 
-    /**
-     * @param Dispatcher $dispatcher
-     */
-    public function injectDispatcher(Dispatcher $dispatcher): void
-    {
-        $this->dispatcher = $dispatcher;
-    }
 
     /**
      * Convert entity to array.
@@ -51,8 +39,8 @@ abstract class AbstractResource implements ResourceInterface
     {
         $result = $this->extractProperties();
 
-        $eventData = GeneralUtility::makeInstance(ResourceToArray::class, $result);
-        $this->dispatcher->dispatch(get_class($this), 'resourceToArray', [$eventData, $this->entity]);
+        $eventData = GeneralUtility::makeInstance(ResourceToArray::class, $result, $this->entity);
+        GeneralUtility::makeInstance(\Psr\EventDispatcher\EventDispatcherInterface::class)->dispatch($eventData);
 
         return $eventData->getData();
     }

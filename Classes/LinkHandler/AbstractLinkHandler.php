@@ -25,7 +25,6 @@ namespace Pixelant\PxaProductManager\LinkHandler;
  *  This copyright notice MUST APPEAR in all copies of the script!
  */
 
-use Pixelant\PxaProductManager\Backend\Tree\BrowserTreeView;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\RecordList\ElementBrowserRecordList;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
@@ -39,9 +38,9 @@ use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
-use TYPO3\CMS\Recordlist\LinkHandler\AbstractLinkHandler as Typo3LinkHandler;
-use TYPO3\CMS\Recordlist\LinkHandler\LinkHandlerInterface;
-use TYPO3\CMS\Recordlist\Tree\View\LinkParameterProviderInterface;
+use TYPO3\CMS\Backend\LinkHandler\AbstractLinkHandler as Typo3LinkHandler;
+use TYPO3\CMS\Backend\LinkHandler\LinkHandlerInterface;
+use TYPO3\CMS\Backend\Tree\View\LinkParameterProviderInterface;
 
 /**
  * Link handler for page (and content) links.
@@ -57,12 +56,14 @@ abstract class AbstractLinkHandler extends Typo3LinkHandler implements
      */
     protected array $linkParts = [];
 
+    protected \TYPO3\CMS\Fluid\View\StandaloneView $productManagerView;
+
     /**
      * We don't support updates since there is no difference to simply set the link again.
      *
      * @var bool
      */
-    protected $updateSupported = false;
+
 
     /**
      * @var int
@@ -80,13 +81,14 @@ abstract class AbstractLinkHandler extends Typo3LinkHandler implements
     public function __construct()
     {
         parent::__construct();
+        $this->updateSupported = false;
         // Remove unsupported link attributes
         $this->linkAttributes = array_filter($this->linkAttributes, function ($attribute) {
             return !in_array($attribute, ['target', 'rel', 'params'], true);
         });
 
-        GeneralUtility::makeInstance(PageRenderer::class)->loadRequireJsModule(
-            'TYPO3/CMS/PxaProductManager/Backend/LinkHandler'
+        GeneralUtility::makeInstance(PageRenderer::class)->loadJavaScriptModule(
+            '@pixelant/pxa-product-manager/backend/link-handler.js'
         );
     }
 
@@ -112,7 +114,7 @@ abstract class AbstractLinkHandler extends Typo3LinkHandler implements
 
             // Save pid
             if ($record) {
-                $this->pid = $record['pid'];
+                $this->pid = (int)$record['pid'];
             }
 
             return true;
@@ -129,30 +131,26 @@ abstract class AbstractLinkHandler extends Typo3LinkHandler implements
      */
     public function render(ServerRequestInterface $request): string
     {
-        $this->view->setTemplateRootPaths([
+        $this->getBackendUser()->initializeWebmountsForElementBrowser();
+        GeneralUtility::makeInstance(PageRenderer::class)->loadJavaScriptModule('@typo3/backend/record-search.js');
+        GeneralUtility::makeInstance(PageRenderer::class)->loadJavaScriptModule('@typo3/backend/column-selector-button.js');
+        $this->productManagerView = GeneralUtility::makeInstance(\TYPO3\CMS\Fluid\View\StandaloneView::class);
+        $this->productManagerView->setTemplateRootPaths([
             10 => 'EXT:pxa_product_manager/Resources/Private/Backend/Templates/LinkBrowser/',
         ]);
 
         $this->expandPage = (int) ($request->getQueryParams()['expandPage'] ?? 0);
 
-        $tsConfig = $GLOBALS['BE_USER']->getTSConfig();
-
-        /** @var BrowserTreeView $pageTree */
-        $pageTree = GeneralUtility::makeInstance(BrowserTreeView::class);
-        $pageTree->setLinkParameterProvider($this);
-        $pageTree->ext_showNavTitle = (bool)($tsConfig['options.']['pageTree.']['showNavTitle'] ?? false);
-        $pageTree->ext_showPageId = (bool)($tsConfig['options.']['pageTree.']['showPageIdWithTitle'] ?? false);
-        $pageTree->ext_showPathAboveMounts = (bool)($tsConfig['options.']['pageTree.']['showPathAboveMounts'] ?? false);
-        $pageTree->addField('nav_title');
-
-        $this->view->assignMultiple([
+        $this->productManagerView->assignMultiple([
             'tableName' => $this->tableName(),
-            'tree' => $pageTree->getBrowsableTree(),
+            'expandedPage' => $this->expandPage ?: $this->pid,
+            'contentOnly' => (bool)($request->getQueryParams()['contentOnly'] ?? false),
         ]);
+        GeneralUtility::makeInstance(PageRenderer::class)->loadJavaScriptModule('@typo3/backend/tree/page-browser.js');
 
-        $this->addRecordsOnExpandedPage($this->expandPage);
+        $this->addRecordsOnExpandedPage($this->expandPage, $request);
 
-        return $this->view->render('ProductManager');
+        return $this->productManagerView->render('ProductManager');
     }
 
     /**
@@ -229,8 +227,8 @@ abstract class AbstractLinkHandler extends Typo3LinkHandler implements
                     $queryBuilder->createNamedParameter($this->linkParts['url'][$this->linkName()], \PDO::PARAM_INT)
                 )
             )
-            ->execute()
-            ->fetch();
+            ->executeQuery()
+            ->fetchAssociative();
 
         if ($record) {
             $title = BackendUtility::getRecordTitle(
@@ -250,7 +248,7 @@ abstract class AbstractLinkHandler extends Typo3LinkHandler implements
      *
      * @param $pageId
      */
-    protected function addRecordsOnExpandedPage($pageId): void
+    protected function addRecordsOnExpandedPage($pageId, ServerRequestInterface $request): void
     {
         // If there is an anchor value (content element reference) in the element reference, then force an ID to expand:
         if (!$pageId && isset($this->linkParts['url'][$this->linkName()])) {
@@ -265,12 +263,12 @@ abstract class AbstractLinkHandler extends Typo3LinkHandler implements
             $pageId = (int)$pageId;
 
             $activePageRecord = BackendUtility::getRecordWSOL('pages', $pageId);
-            $this->view->assign('expandActivePage', true);
+            $this->productManagerView->assign('expandActivePage', true);
 
             // Create header for listing, showing the page title/icon
-            $this->view->assign('activePage', $activePageRecord);
-            $this->view->assign('activePageTitle', BackendUtility::getRecordTitle('pages', $activePageRecord, true));
-            $this->view->assign(
+            $this->productManagerView->assign('activePage', $activePageRecord);
+            $this->productManagerView->assign('activePageTitle', BackendUtility::getRecordTitle('pages', $activePageRecord, true));
+            $this->productManagerView->assign(
                 'activePageIcon',
                 $this->iconFactory->getIconForRecord('pages', $activePageRecord, Icon::SIZE_SMALL)->render()
             );
@@ -280,32 +278,32 @@ abstract class AbstractLinkHandler extends Typo3LinkHandler implements
 
             /** @var ElementBrowserRecordList $dbList */
             $dbList = GeneralUtility::makeInstance(ElementBrowserRecordList::class);
-            $dbList->setOverrideUrlParameters($this->getUrlParameters([]));
-            $dbList->thisScript = $this->getScriptUrl();
-            $dbList->thumbs = false;
+            $dbList->setRequest($request);
+            $dbList->setOverrideUrlParameters($this->getUrlParameters([]), $request);
             $dbList->setIsEditable(false);
-            $dbList->calcPerms = $this->getBackendUser()->calcPerms($pageInfo);
+            $dbList->calcPerms = new Permission($this->getBackendUser()->calcPerms($pageInfo));
             $dbList->noControlPanels = true;
+            $dbList->displayRecordDownload = false;
             $dbList->clickMenuEnabled = false;
             $dbList->tableList = $this->tableName();
-            $dbList->hideTranslations = $this->tableName();
 
+            $parameters = array_replace($request->getQueryParams(), (array)$request->getParsedBody());
+            $searchWord = (string)($parameters['searchTerm'] ?? '');
+            $searchLevels = (int)($parameters['search_levels'] ?? 0);
             $dbList->start(
                 $pageId,
-                GeneralUtility::_GP('table'),
-                MathUtility::forceIntegerInRange(GeneralUtility::_GP('pointer'), 0, 100000),
-                GeneralUtility::_GP('search_field'),
-                GeneralUtility::_GP('search_levels'),
-                GeneralUtility::_GP('showLimit')
+                $this->tableName(),
+                MathUtility::forceIntegerInRange((int)($parameters['pointer'] ?? 0), 0, 100000),
+                $searchWord,
+                $searchLevels
             );
+            $dbListHTML = GeneralUtility::makeInstance(\TYPO3\CMS\Backend\View\RecordSearchBoxComponent::class)
+                ->setSearchLevel($searchLevels)
+                ->setSearchWord($searchWord)
+                ->render($request, $dbList->listURL('', '-1', 'pointer,searchTerm'));
+            $dbListHTML .= $dbList->generateList();
 
-            $dbList->setDispFields();
-            $dbList->generateList();
-
-            $dbListHTML = $dbList->getSearchBox();
-            $dbListHTML .= $dbList->HTMLcode;
-
-            $this->view->assign('dbListHTML', $dbListHTML);
+            $this->productManagerView->assign('dbListHTML', $dbListHTML);
         }
     }
 

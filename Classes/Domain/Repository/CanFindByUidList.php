@@ -42,13 +42,13 @@ trait CanFindByUidList
         $query = $this->createQuery();
 
         // If extbase already is in overlay mode, return original list of uids.
-        $overlayMode = $query->getQuerySettings()->getLanguageOverlayMode();
+        $overlayMode = $query->getQuerySettings()->getLanguageAspect()->doOverlays();
         if ($overlayMode) {
             return $uids;
         }
 
         // No "overlay" needed for default language.
-        $languageId = $query->getQuerySettings()->getLanguageUid() ?? 0;
+        $languageId = $query->getQuerySettings()->getLanguageAspect()->getId() ?? 0;
         if ($languageId === 0) {
             return $uids;
         }
@@ -85,7 +85,7 @@ trait CanFindByUidList
                     )
                 )
             )
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         if (count($records) > 0) {
@@ -95,7 +95,7 @@ trait CanFindByUidList
             }
             // Fix sorting according original uids.
             usort($records, function ($a, $b) {
-                return $a['sorting'] > $b['sorting'];
+                return $a['sorting'] <=> $b['sorting'];
             });
 
             $uids = array_column($records, 'uid');

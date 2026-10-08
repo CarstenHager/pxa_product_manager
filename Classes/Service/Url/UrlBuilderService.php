@@ -40,7 +40,7 @@ class UrlBuilderService implements UrlBuilderServiceInterface
     /**
      * @var TypoScriptFrontendController
      */
-    protected TypoScriptFrontendController $tsfe;
+    protected ?TypoScriptFrontendController $tsfe;
 
     /**
      * Flag if should force absolute url.
@@ -56,7 +56,7 @@ class UrlBuilderService implements UrlBuilderServiceInterface
      */
     public function __construct(TypoScriptFrontendController $typoScriptFrontendController = null)
     {
-        $this->tsfe = $typoScriptFrontendController ?? $GLOBALS['TSFE'];
+        $this->tsfe = $typoScriptFrontendController ?? $GLOBALS['TSFE'] ?? null;
     }
 
     /**
@@ -67,20 +67,26 @@ class UrlBuilderService implements UrlBuilderServiceInterface
      */
     public function url(Product $product): string
     {
-        $pageUid = 0;
-        $params = '';
-
-        if (!empty($product) && !empty($product->getFirstSingleviewPage())) {
-            $dokType = $product->getFirstSingleviewPage()->getDoktype() ?? 1;
-            $namespace = static::NAMESPACES[$dokType];
-            $params = static::NAMESPACE_PARAMS[$namespace];
-            $params['product'] = $product->getUid();
-            $params = GeneralUtility::implodeArrayForUrl(
-                $namespace,
-                $params
-            );
-            $pageUid = $product->getFirstSingleviewPage()->getUid() ?? 0;
+        $page = $product->getFirstSingleviewPage();
+        $pageUid = $page?->getUid() ?? 0;
+        $dokType = $page?->getDoktype() ?? 1;
+        if ($pageUid === 0) {
+            $settings = GeneralUtility::makeInstance(\TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface::class)
+                ->getConfiguration(\TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface::CONFIGURATION_TYPE_SETTINGS, 'PxaProductManager');
+            $siteSettings = GeneralUtility::makeInstance(\Pixelant\PxaProductManager\Configuration\Site\SettingsReader::class);
+            $pageUid = (int)($settings['pids']['singleViewPid'] ?? 0) ?: (int)$siteSettings->getValue('singleViewPid');
+            if ($pageUid > 0) {
+                $pageRecord = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Domain\Repository\PageRepository::class)->getPage($pageUid);
+                $dokType = (int)($pageRecord['doktype'] ?? 1);
+            }
         }
+        if ($pageUid <= 0) {
+            return '';
+        }
+        $namespace = static::NAMESPACES[$dokType] ?? static::NAMESPACES[1];
+        $params = static::NAMESPACE_PARAMS[$namespace];
+        $params['product'] = $product->getUid();
+        $params = GeneralUtility::implodeArrayForUrl($namespace, $params);
 
         return $this->buildUri($pageUid, $params);
     }
@@ -90,7 +96,7 @@ class UrlBuilderService implements UrlBuilderServiceInterface
      */
     public function absolute(bool $absolute): void
     {
-        $this->absolute = true;
+        $this->absolute = $absolute;
     }
 
     /**
@@ -116,6 +122,11 @@ class UrlBuilderService implements UrlBuilderServiceInterface
             $this->tsfe
         );
 
-        return $contentObjectRenderer->typolink_URL($typolink);
+        $request = $GLOBALS['TYPO3_REQUEST'] ?? null;
+        if ($request instanceof \Psr\Http\Message\ServerRequestInterface) {
+            $contentObjectRenderer->setRequest($request);
+        }
+
+        return $contentObjectRenderer->typoLink_URL($typolink);
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-defined('TYPO3_MODE') || die('Access denied.');
+defined('TYPO3') || die('Access denied.');
 
 return (function () {
     $ll = 'LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_db.xlf:';
@@ -251,6 +251,9 @@ return (function () {
                     'minitems' => 0,
                     'maxitems' => 9999,
                     'multiple' => 0,
+                    'behaviour' => [
+                        'allowLanguageSynchronization' => true,
+                    ],
                 ],
             ],
             'images' => [
@@ -381,6 +384,9 @@ return (function () {
                             'searchCondition' => 'sys_language_uid in (0,-1) AND parent = 0',
                         ],
                     ],
+                    'behaviour' => [
+                        'allowLanguageSynchronization' => true,
+                    ],
                 ],
             ],
             'keywords' => [
@@ -496,6 +502,9 @@ return (function () {
                     'foreign_table' => 'tx_pxaproductmanager_domain_model_producttype',
                     'minitems' => 0,
                     'maxitems' => 1,
+                    'behaviour' => [
+                        'allowLanguageSynchronization' => true,
+                    ],
                 ],
             ],
             'singleview_page' => [
@@ -516,6 +525,9 @@ return (function () {
                             'expandAll' => true,
                             'showHeader' => true,
                         ],
+                    ],
+                    'behaviour' => [
+                        'allowLanguageSynchronization' => true,
                     ],
                 ],
             ],
