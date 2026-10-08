@@ -1,6 +1,6 @@
 <?php
 
-defined('TYPO3_MODE') || die;
+defined('TYPO3') || die;
 
 (function (): void {
     $ll = 'LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_db.xlf:';
@@ -58,7 +58,7 @@ defined('TYPO3_MODE') || die;
         'pxapm_image' => [
             'exclude' => true,
             'label' => $ll . 'sys_category.pxapm_image',
-            'config' => \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::getFileFieldTCAConfig(
+            'config' => \Pixelant\PxaProductManager\Utility\TcaFileFieldConfiguration::get(
                 'pxapm_image',
                 [
                     'appearance' => [
@@ -141,7 +141,7 @@ defined('TYPO3_MODE') || die;
         'pxapm_banner_image' => [
             'exclude' => 1,
             'label' => $ll . 'sys_category.pxapm_banner_image',
-            'config' => \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::getFileFieldTCAConfig(
+            'config' => \Pixelant\PxaProductManager\Utility\TcaFileFieldConfiguration::get(
                 'pxapm_banner_image',
                 [
                     'appearance' => [

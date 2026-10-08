@@ -45,7 +45,7 @@ abstract class AbstractDemandRepository extends Repository implements DemandRepo
     /**
      * @var EventDispatcherInterface
      */
-    protected $eventDispatcher;
+    protected EventDispatcherInterface $eventDispatcher;
 
     /**
      * @var DemandService
@@ -89,12 +89,12 @@ abstract class AbstractDemandRepository extends Repository implements DemandRepo
      */
     public function findDemanded(DemandInterface $demand): array
     {
-        $result = $this->createDemandQueryBuilder($demand)->execute();
-        $dataMapper = $this->objectManager->get(DataMapper::class);
+        $result = $this->createDemandQueryBuilder($demand)->executeQuery();
+        $dataMapper = GeneralUtility::makeInstance(DataMapper::class);
 
         return $dataMapper->map(
             $this->getObjectClassName(),
-            $result->fetchAll()
+            $result->fetchAllAssociative()
         );
     }
 

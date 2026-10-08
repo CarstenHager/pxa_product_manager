@@ -86,26 +86,26 @@ class RelationInheritanceIndexUtility
                     'tprii.tablename',
                     $queryBuilder->createNamedParameter(
                         'tx_pxaproductmanager_domain_model_attributevalue',
-                        \PDO::PARAM_STR
+                        \TYPO3\CMS\Core\Database\Connection::PARAM_STR
                     )
                 ),
                 $queryBuilder->expr()->eq(
                     'tprii.child_parent_tablename',
                     $queryBuilder->createNamedParameter(
                         'tx_pxaproductmanager_domain_model_product',
-                        \PDO::PARAM_STR
+                        \TYPO3\CMS\Core\Database\Connection::PARAM_STR
                     )
                 ),
                 $queryBuilder->expr()->eq(
                     'tprii.child_parent_id',
-                    $queryBuilder->createNamedParameter($childParentId, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter($childParentId, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)
                 ),
                 $queryBuilder->expr()->neq(
                     'child_product.parent',
                     'attrval_parent.product'
                 ),
             )
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         if (is_array($result)) {
@@ -146,7 +146,7 @@ class RelationInheritanceIndexUtility
                     $queryBuilder->createNamedParameter(ProductRepository::TABLE_NAME)
                 )
             )
-            ->execute();
+            ->executeStatement();
     }
 
     /**

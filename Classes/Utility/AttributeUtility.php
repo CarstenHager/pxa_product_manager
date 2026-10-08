@@ -83,7 +83,7 @@ class AttributeUtility
             );
         }
 
-        $attributes = $queryBuilder->execute()->fetchAllAssociativeIndexed();
+        $attributes = $queryBuilder->executeQuery()->fetchAllAssociativeIndexed();
 
         if (is_array($attributes)) {
             return $attributes;
@@ -114,7 +114,7 @@ class AttributeUtility
         $row = $queryBuilder
             ->select(...GeneralUtility::trimExplode(',', $selectFields, true))
             ->from(AttributeRepository::TABLE_NAME)
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         if (is_array($row)) {
@@ -243,7 +243,7 @@ class AttributeUtility
                 $queryBuilder->expr()->eq('product', $queryBuilder->createNamedParameter($productId)),
                 $queryBuilder->expr()->in('attribute', $attributeIds)
             )
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         if (is_array($attributeValues)) {
@@ -285,7 +285,7 @@ class AttributeUtility
             ->where(
                 $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid))
             )
-            ->execute()
+            ->executeQuery()
             ->fetchAssociative();
 
         $attribute = self::findAttribute($attributeValue['attribute']);
@@ -324,7 +324,7 @@ class AttributeUtility
             ->where(
                 $queryBuilder->expr()->eq('attribute', $queryBuilder->createNamedParameter($attributeId))
             )
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         if (is_array($row)) {
@@ -351,10 +351,10 @@ class AttributeUtility
             ->where(
                 $queryBuilder->expr()->eq(
                     'uid',
-                    $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter($uid, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)
                 )
             )
-            ->execute();
+            ->executeStatement();
     }
 
     /**

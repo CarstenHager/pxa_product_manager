@@ -20,7 +20,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
 use TYPO3\CMS\Core\Utility\StringUtility;
 use TYPO3\CMS\Extbase\Domain\Model\FileReference;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Persistence\ObjectStorage;
 
 /**
@@ -57,7 +56,7 @@ class DataInheritanceUtility
         );
 
         self::$productTypeInheritedFields[$productType]
-            = GeneralUtility::trimExplode(',', $productTypeRecord['inherit_fields'] . ',product_type', true);
+            = GeneralUtility::trimExplode(',', ($productTypeRecord['inherit_fields'] ?? '') . ',product_type', true);
 
         return self::$productTypeInheritedFields[$productType];
     }
@@ -197,7 +196,7 @@ class DataInheritanceUtility
                 $productInheritedFieldsRecord
             );
 
-            if ($fieldTcaConfiguration['type'] === 'inline') {
+            if (($fieldTcaConfiguration['type'] ?? '') === 'inline') {
                 $resolvedItemsList = self::resolveInlineInheritedFields(
                     $fieldTcaConfiguration,
                     $productId
@@ -231,8 +230,7 @@ class DataInheritanceUtility
      */
     protected static function resolveInlineInheritedFields(array $fieldTcaConfiguration, int $productId): array
     {
-        $eventDispatcher = GeneralUtility::makeInstance(ObjectManager::class)
-            ->get(EventDispatcherInterface::class);
+        $eventDispatcher = GeneralUtility::makeInstance(EventDispatcherInterface::class);
 
         $resolvedItemsList = [];
 
@@ -268,7 +266,7 @@ class DataInheritanceUtility
         $compiledProductRecord = self::compileRecordData(ProductRepository::TABLE_NAME, $productId);
 
         if ($onlyIncludeInheritedFields) {
-            $productType = (int)$compiledProductRecord['product_type'] ?? false;
+            $productType = (int)($compiledProductRecord['product_type'] ?? false);
             if (!$productType) {
                 self::getProductTypeForProduct((int)$compiledProductRecord['uid']);
             }
@@ -404,7 +402,7 @@ class DataInheritanceUtility
         $attributeTypes = self::listAttributeTypesOfInheritedAttributeValues($inheritedAttributes);
 
         foreach ($inheritedAttributes as $attribute) {
-            $inheritedAttributeId = (string)array_pop(explode('.', (string)$attribute ?? ''));
+            $inheritedAttributeId = (string)array_slice(explode('.', (string)$attribute ?? ''), -1)[0];
             $childItemIndex = self::resolvedItemIndexByIdentifier($resolvedChildItemsList, $inheritedAttributeId);
 
             switch ($attributeTypes[$inheritedAttributeId]) {
@@ -478,7 +476,7 @@ class DataInheritanceUtility
         $missingAttributes = [];
         $childAttributeIdList = array_column($resolvedChildItemsList, 'identifier');
         foreach ($inheritedAttributes as $attribute) {
-            $inheritedAttributeId = (string)array_pop(explode('.', (string)$attribute ?? ''));
+            $inheritedAttributeId = (string)array_slice(explode('.', (string)$attribute ?? ''), -1)[0];
             if (!in_array($inheritedAttributeId, $childAttributeIdList, true)) {
                 $missingAttributes[] = $inheritedAttributeId;
             }
@@ -499,7 +497,7 @@ class DataInheritanceUtility
     ): array {
         $attributes = [];
         foreach ($inheritedAttributes as $attribute) {
-            $attributeId = (int)array_pop(explode('.', (string)$attribute ?? ''));
+            $attributeId = (int)array_slice(explode('.', (string)$attribute ?? ''), -1)[0];
             $type = (int)BackendUtility::getRecord(
                 AttributeRepository::TABLE_NAME,
                 $attributeId,
@@ -587,8 +585,7 @@ class DataInheritanceUtility
         array &$resolvedRelationsItems,
         string $foreignTable
     ): void {
-        $eventDispatcher = GeneralUtility::makeInstance(ObjectManager::class)
-            ->get(EventDispatcherInterface::class);
+        $eventDispatcher = GeneralUtility::makeInstance(EventDispatcherInterface::class);
 
         $identifierField = $eventDispatcher
             ->dispatch(new InlineIdentifierFieldEvent($foreignTable))
@@ -690,8 +687,7 @@ class DataInheritanceUtility
         array &$resolvedChildItemsList,
         array $resolvedParentItemsList
     ): void {
-        $eventDispatcher = GeneralUtility::makeInstance(ObjectManager::class)
-            ->get(EventDispatcherInterface::class);
+        $eventDispatcher = GeneralUtility::makeInstance(EventDispatcherInterface::class);
 
         foreach ($resolvedParentItemsList as $pIndex => $pResolvedItem) {
             $childHasRelation = self::childRelationHaveItemWithIdentifier(
@@ -760,14 +756,14 @@ class DataInheritanceUtility
         $inheritedAttributes = [];
 
         foreach (array_keys($parentInheritanceData) as $inheritField) {
-            if ($parentInheritanceData[$inheritField] !== $childInheritanceData[$inheritField]) {
+            if ($parentInheritanceData[$inheritField] !== ($childInheritanceData[$inheritField] ?? null)) {
                 $fieldTcaConfiguration = TcaUtility::getTcaFieldConfigurationAndRespectColumnsOverrides(
                     ProductRepository::TABLE_NAME,
                     $inheritField,
                     $childInheritanceData
                 );
 
-                if ($fieldTcaConfiguration['type'] === 'inline') {
+                if (($fieldTcaConfiguration['type'] ?? '') === 'inline') {
                     $computedInheritanceData = self::computeInlineInheritanceData(
                         $inheritField,
                         $fieldTcaConfiguration,
@@ -818,15 +814,18 @@ class DataInheritanceUtility
     public static function compileRecordData(string $tableName, int $vanillaUid, bool $removeUnprocessedColumns = false)
     {
         $formDataGroup = GeneralUtility::makeInstance(TcaDatabaseRecord::class);
-        $formDataCompiler = GeneralUtility::makeInstance(FormDataCompiler::class, $formDataGroup);
+        $formDataCompiler = GeneralUtility::makeInstance(FormDataCompiler::class);
 
         $formDataCompilerInput = [
             'tableName' => $tableName,
             'vanillaUid' => $vanillaUid,
             'command' => 'edit',
+            // Inheritance also runs in CLI without a backend route or return URL.
+            'returnUrl' => '',
+            'request' => $GLOBALS['TYPO3_REQUEST'] ?? new \TYPO3\CMS\Core\Http\ServerRequest(),
         ];
 
-        $result = $formDataCompiler->compile($formDataCompilerInput);
+        $result = $formDataCompiler->compile($formDataCompilerInput, $formDataGroup);
         $row = $result['databaseRow'];
 
         if ($removeUnprocessedColumns) {
@@ -874,7 +873,7 @@ class DataInheritanceUtility
 
         // If child record is localized, fetch l10n_parent, use default record.
         if (!empty($childRecord['parent'])) {
-            $parent = (int)array_pop(explode('_', (string)$childRecord['parent'] ?? ''));
+            $parent = (int)array_slice(explode('_', (string)($childRecord['parent'] ?? '')), -1)[0];
 
             if (!empty($parent)) {
                 // If child product is localized, fetch localized product of parent.
@@ -913,7 +912,7 @@ class DataInheritanceUtility
             $translationSource
         )[$translationSource] ?? 0;
 
-        return (int)array_pop(explode('_', (string)$l10nParent ?? 0));
+        return (int)array_slice(explode('_', (string)$l10nParent ?? 0), -1)[0];
     }
 
     /**

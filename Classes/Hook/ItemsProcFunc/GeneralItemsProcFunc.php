@@ -24,41 +24,27 @@ class GeneralItemsProcFunc
      */
     public function getFieldsForTable(array $configuration): array
     {
-        $tableName = $configuration['config']['itemsProcConfig']['table'];
-
-        $columns = $GLOBALS['TCA'][$tableName]['columns'];
-
-        $columns = array_filter(
-            $columns,
-            fn ($column) => $column['config']['type'] !== 'passthrough'
-        );
-
-        $excludeFields = [
-            $GLOBALS['TCA'][$tableName]['ctrl']['languageField'],
-            $GLOBALS['TCA'][$tableName]['ctrl']['transOrigPointerField'],
-            $GLOBALS['TCA'][$tableName]['ctrl']['type'] ?? [],
-        ];
-
-        if ($configuration['config']['itemsProcConfig']['exclude'] ?? '' !== '') {
-            $excludeFields = array_merge($excludeFields, GeneralUtility::trimExplode(
-                ',',
-                $configuration['config']['itemsProcConfig']['exclude'],
-                true
-            ));
+        $tableName = (string)($configuration['config']['itemsProcConfig']['table'] ?? '');
+        $table = $GLOBALS['TCA'][$tableName] ?? [];
+        $columns = $table['columns'] ?? [];
+        $excludeFields = array_filter([
+            $table['ctrl']['languageField'] ?? '',
+            $table['ctrl']['transOrigPointerField'] ?? '',
+            $table['ctrl']['type'] ?? '',
+        ]);
+        $exclude = (string)($configuration['config']['itemsProcConfig']['exclude'] ?? '');
+        $excludeFields = array_merge($excludeFields, GeneralUtility::trimExplode(',', $exclude, true));
+        $configuration['items'] = [];
+        foreach ($columns as $fieldName => $column) {
+            if (($column['config']['type'] ?? '') === 'passthrough' || in_array($fieldName, $excludeFields, true)) {
+                continue;
+            }
+            $configuration['items'][] = [
+                'label' => $column['label'] ?? $fieldName,
+                'value' => $fieldName,
+                'icon' => 'tcarecords-' . $tableName . '-default',
+            ];
         }
-
-        $columns = array_filter(
-            $columns,
-            fn ($key) => !in_array($key, $excludeFields, true),
-            ARRAY_FILTER_USE_KEY
-        );
-
-        $configuration['items'] = array_map(
-            fn ($label, $fieldName) => [$label, $fieldName, $GLOBALS['TCA'][$tableName]['ctrl']['iconfile']],
-            array_column($columns, 'label'),
-            array_keys($columns),
-        );
-
         return $configuration;
     }
 }

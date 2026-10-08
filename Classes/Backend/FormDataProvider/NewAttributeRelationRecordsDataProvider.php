@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Backend\FormDataProvider;
 
+use Pixelant\PxaProductManager\Utility\TcaUtility;
 use Pixelant\PxaProductManager\Domain\Collection\CanCreateCollection;
 use Pixelant\PxaProductManager\Domain\Repository\AttributeRepository;
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
@@ -109,9 +110,10 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
         /** @var TcaDatabaseRecord $formDataGroup */
         $formDataGroup = GeneralUtility::makeInstance(TcaDatabaseRecord::class);
         /** @var FormDataCompiler $formDataCompiler */
-        $formDataCompiler = GeneralUtility::makeInstance(FormDataCompiler::class, $formDataGroup);
+        $formDataCompiler = GeneralUtility::makeInstance(FormDataCompiler::class);
         // This is mostly copied from \TYPO3\CMS\Backend\Form\FormDataProvider\TcaInline
         $formDataCompilerInput = [
+            'request' => $result['request'],
             'command' => 'new',
             'tableName' => $childTableName,
             // Give incoming returnUrl down to children so they generate a returnUrl back to
@@ -145,8 +147,8 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
         // For foreign_selector with useCombination $mainChild is the mm record
         // and $combinationChild is the child-child. For 1:n "normal" relations,
         // $mainChild is just the normal child record and $combinationChild is empty.
-        $newChild = $formDataCompiler->compile($formDataCompilerInput);
-        $newChild['databaseRow']['attribute'] = [$this->getAttributeArray($attributeId)];
+        $newChild = $formDataCompiler->compile($formDataCompilerInput, $formDataGroup);
+        $newChild['databaseRow']['attribute'] = [(string)$attributeId];
 
         // This wizard sets the attribute type
         if ($newChild['processedTca']['columns']['value']['config']['type'] === 'inline') {
@@ -195,7 +197,7 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
         $addedAttributesUidList = [];
         $attributeValueChildren = [];
         foreach ($children as $key => $child) {
-            $attributeId = (int)$child['databaseRow']['attribute'][0]['uid'] ?? 0;
+            $attributeId = (int)TcaUtility::getAttributeUid($child['databaseRow']['attribute'] ?? 0);
             if ($attributeId > 0 && in_array($attributeId, $validAttributeIdsList, true)) {
                 if (!in_array($attributeId, $addedAttributesUidList, true)) {
                     $addedAttributesUidList[] = $attributeId;
@@ -217,7 +219,7 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
     protected function resolveAttributeValueChildArrayKeyByAttributeId(int $attributeId, array $children): int
     {
         foreach ($children as $key => $attributeValueResult) {
-            if ((int)$attributeValueResult['databaseRow']['attribute'][0]['uid'] === $attributeId) {
+            if ((int)TcaUtility::getAttributeUid($attributeValueResult['databaseRow']['attribute'] ?? 0) === $attributeId) {
                 return (int)$key;
             }
         }

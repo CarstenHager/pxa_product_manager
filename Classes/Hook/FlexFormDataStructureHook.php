@@ -141,9 +141,9 @@ class FlexFormDataStructureHook implements SingletonInterface
             $row = $queryBuilder
                 ->select('pi_flexform')
                 ->from('tt_content')
-                ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT)))
-                ->execute()
-                ->fetch();
+                ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)))
+                ->executeQuery()
+                ->fetchAssociative();
 
             $this->setLastActionFromSettings($row);
         }

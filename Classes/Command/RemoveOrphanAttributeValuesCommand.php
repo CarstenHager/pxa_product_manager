@@ -50,7 +50,7 @@ class RemoveOrphanAttributeValuesCommand extends Command
      * @param OutputInterface $output
      * @return int error code
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
         $io->title($this->getDescription());
@@ -64,7 +64,7 @@ class RemoveOrphanAttributeValuesCommand extends Command
             $io->success('No orphant attribute values found');
         }
 
-        return true;
+        return Command::SUCCESS;
     }
 
     /**
@@ -84,11 +84,11 @@ class RemoveOrphanAttributeValuesCommand extends Command
             ->where(
                 $queryBuilder->expr()->eq(
                     'product',
-                    $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter(0, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)
                 )
             )
-            ->execute()
-            ->fetchColumn(0);
+            ->executeQuery()
+            ->fetchOne();
 
         return $count;
     }
@@ -109,9 +109,9 @@ class RemoveOrphanAttributeValuesCommand extends Command
             ->where(
                 $queryBuilder->expr()->eq(
                     'product',
-                    $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter(0, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)
                 )
             )
-            ->execute();
+            ->executeStatement();
     }
 }

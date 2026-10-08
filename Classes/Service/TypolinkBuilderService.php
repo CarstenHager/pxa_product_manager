@@ -11,18 +11,12 @@ use Pixelant\PxaProductManager\Service\Url\UrlBuilderServiceInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
 use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3\CMS\Frontend\Typolink\AbstractTypolinkBuilder;
 
 class TypolinkBuilderService extends AbstractTypolinkBuilder
 {
-    /**
-     * @var ObjectManager
-     */
-    protected ObjectManager $objectManager;
-
     /**
      * @var SettingsReader
      */
@@ -38,9 +32,7 @@ class TypolinkBuilderService extends AbstractTypolinkBuilder
     ) {
         parent::__construct($contentObjectRenderer, $typoScriptFrontendController);
 
-        $this->objectManager = GeneralUtility::makeInstance(ObjectManager::class);
         $this->siteConfiguration = GeneralUtility::makeInstance(SettingsReader::class);
-        $this->checkExtbaseMappings();
     }
 
     /**
@@ -52,7 +44,7 @@ class TypolinkBuilderService extends AbstractTypolinkBuilder
      * @param array $conf
      * @return array
      */
-    public function build(array &$linkDetails, string $linkText, string $target, array $conf): array
+    public function build(array &$linkDetails, string $linkText, string $target, array $conf): \TYPO3\CMS\Frontend\Typolink\LinkResultInterface
     {
         $finalUrl = '';
 
@@ -66,7 +58,8 @@ class TypolinkBuilderService extends AbstractTypolinkBuilder
             }
         }
 
-        return [$finalUrl, $linkText, $target];
+        return (new \TYPO3\CMS\Frontend\Typolink\LinkResult('pxappm', $finalUrl))
+            ->withLinkText($linkText)->withTarget($target);
     }
 
     /**
@@ -76,9 +69,8 @@ class TypolinkBuilderService extends AbstractTypolinkBuilder
      */
     protected function getUrlBuilder(): UrlBuilderServiceInterface
     {
-        return $this->objectManager->get(
-            UrlBuilderServiceInterface::class,
-            $this->getTypoScriptFrontendController()
+        return GeneralUtility::makeInstance(
+            UrlBuilderServiceInterface::class
         );
     }
 
@@ -93,51 +85,11 @@ class TypolinkBuilderService extends AbstractTypolinkBuilder
         $id = (int)($linkDetails['product'] ?? 0);
 
         if (isset($linkDetails['product'])) {
-            $repository = $this->objectManager->get(ProductRepository::class);
+            $repository = GeneralUtility::makeInstance(ProductRepository::class);
 
             return $repository->findByUid($id);
         }
 
         return null;
-    }
-
-    /**
-     * Checks if extbase mapping is set for mappings in ext_typoscript_setup.txt.
-     *
-     * Workaround to prevent the wrong tablename getting written
-     * in cf_extbase_datamapfactory_datamap for identifier
-     * 'Pixelant%PxaProductManager%Domain%Model%Category'
-     * when LinkBuilder is called from middleware in TYPO3 v9,
-     * e.g. the first request after cache is cleared is a redirec to a Category (PM).
-     *
-     * Since extbase ts configuration isn't loaded when TypolinkBuilderService
-     *
-     * check progress of https://forge.typo3.org/issues/75399
-     *
-     * @return void
-     */
-    protected function checkExtbaseMappings(): void
-    {
-        $configurationManager = $this->objectManager->get(ConfigurationManagerInterface::class);
-        $configuration = $configurationManager->getConfiguration(
-            ConfigurationManagerInterface::CONFIGURATION_TYPE_FRAMEWORK
-        );
-
-        $mappings = [
-            'Pixelant\PxaProductManager\Domain\Model\Image' => 'sys_file_reference',
-            'Pixelant\PxaProductManager\Domain\Model\AttributeFile' => 'sys_file_reference',
-            'Pixelant\PxaProductManager\Domain\Model\Category' => 'sys_category',
-        ];
-
-        foreach ($mappings as $class => $mapping) {
-            if (empty($configuration['persistence']['classes'][$class]['mapping']['tableName'])) {
-                $configuration['persistence']['classes'][$class]['mapping']['tableName'] = $mapping;
-                $configurationManager->setConfiguration($configuration);
-            }
-        }
-
-        $configuration = $configurationManager->getConfiguration(
-            ConfigurationManagerInterface::CONFIGURATION_TYPE_FRAMEWORK
-        );
     }
 }

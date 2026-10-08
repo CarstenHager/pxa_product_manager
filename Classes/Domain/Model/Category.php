@@ -43,8 +43,7 @@ class Category extends CategoryExtbase
      * @var \Pixelant\PxaProductManager\Domain\Model\Category
      * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
      */
-    protected $parent = null;
-
+    protected \TYPO3\CMS\Extbase\Domain\Model\Category|\TYPO3\CMS\Extbase\Persistence\Generic\LazyLoadingProxy|null $parent = null;
     /**
      * @var string
      */

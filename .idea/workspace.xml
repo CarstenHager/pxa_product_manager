@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="03b2b518-a99d-4aa2-a3cd-e5a0f6bf8a70" name="Changes" comment="Update V12 mit ChatGPT" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ComposerSettings" synchronizationState="SYNCHRONIZE">
+    <pharConfigPath>$PROJECT_DIR$/composer.json</pharConfigPath>
+    <execution>
+      <execution>
+        <execution>
+          <execution>
+            <execution>
+              <execution>
+                <execution />
+              </execution>
+            </execution>
+          </execution>
+        </execution>
+      </execution>
+    </execution>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="v12" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "CarstenHager"
+  }
+}]]></component>
+  <component name="GitToolBoxStore">
+    <option name="recentBranches">
+      <RecentBranches>
+        <option name="branchesForRepo">
+          <list>
+            <RecentBranchesForRepo>
+              <option name="branches">
+                <list>
+                  <RecentBranch>
+                    <option name="branchName" value="v13" />
+                    <option name="lastUsedInstant" value="1791475932" />
+                  </RecentBranch>
+                  <RecentBranch>
+                    <option name="branchName" value="v12" />
+                    <option name="lastUsedInstant" value="1791475857" />
+                  </RecentBranch>
+                  <RecentBranch>
+                    <option name="branchName" value="master" />
+                    <option name="lastUsedInstant" value="1791475856" />
+                  </RecentBranch>
+                </list>
+              </option>
+              <option name="repositoryRootUrl" value="file://$PROJECT_DIR$" />
+            </RecentBranchesForRepo>
+          </list>
+        </option>
+      </RecentBranches>
+    </option>
+  </component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/CarstenHager/pxa_product_manager.git",
+    "accountId": "ebabe0f6-5431-4119-97ca-cca33e032bd5"
+  }
+}]]></component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0034009014052019" />
+      <entry key="MS500" value="1.3863753205969414" />
+      <entry key="S2" value="2.8753320993499334" />
+      <entry key="S5" value="4.6942284662505465" />
+      <entry key="S10" value="5.981603833974863" />
+      <entry key="S30" value="7.221128151536898" />
+      <entry key="S60" value="7.59534646103669" />
+      <entry key="M2" value="7.793703397135558" />
+      <entry key="M5" value="7.91650656316865" />
+      <entry key="M10" value="7.9580889422196135" />
+      <entry key="M15" value="7.9720226348364935" />
+      <entry key="M30" value="7.985992952269981" />
+      <entry key="H1" value="7.99299187824315" />
+      <entry key="H2" value="7.996494788821943" />
+      <entry key="H4" value="7.998247106732663" />
+      <entry key="D1" value="7.999707811158012" />
+      <entry key="W1" value="7.999958257758033" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.9691986979304907" />
+      <entry key="MS500" value="1.376532650023844" />
+      <entry key="S2" value="2.8656351196458028" />
+      <entry key="S5" value="4.680577421461099" />
+      <entry key="S10" value="5.97039912975735" />
+      <entry key="S30" value="7.2158671173555184" />
+      <entry key="S60" value="7.592477312701687" />
+      <entry key="M2" value="7.792204931799137" />
+      <entry key="M5" value="7.915891270559724" />
+      <entry key="M10" value="7.957778595782572" />
+      <entry key="M15" value="7.971815133500005" />
+      <entry key="M30" value="7.985888898820523" />
+      <entry key="H1" value="7.992939775649174" />
+      <entry key="H2" value="7.99646871853586" />
+      <entry key="H4" value="7.998234066839622" />
+      <entry key="D1" value="7.99970563718255" />
+      <entry key="W1" value="7.999957947173942" />
+    </decayedShown>
+  </component>
+  <component name="PhpWorkspaceProjectConfiguration" interpreter_name="php" />
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 5,
+  "fromUser": false
+}]]></component>
+  <component name="ProjectId" id="3KQ34XFBmTuYYeJyz0LCGazKEDb" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "/Users/carstenhager/PhpstormProjects/pxa_product_manager_git",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "to.speed.mode.migration.done": "true"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-PS-262.10315.130" />
+        <option value="bundled-php-predefined-a98d8de5180a-9522f28f0b20-com.jetbrains.php.sharedIndexes-PS-262.10315.130" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="03b2b518-a99d-4aa2-a3cd-e5a0f6bf8a70" name="Changes" comment="" />
+      <created>1791475773681</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1791475773681</updated>
+      <workItem from="1791475774689" duration="258000" />
+    </task>
+    <task id="LOCAL-00001" summary="Update V12 mit ChatGPT">
+      <option name="closed" value="true" />
+      <created>1791475918396</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1791475918396</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="CUSTOM_BOOLEAN_PROPERTIES">
+                <map>
+                  <entry key="Show.Git.Branches" value="false" />
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Update V12 mit ChatGPT" />
+    <option name="LAST_COMMIT_MESSAGE" value="Update V12 mit ChatGPT" />
+  </component>
+</project>

@@ -1,0 +1,3 @@
+# Include the legacy base configuration for sites using sets as TypoScript providers.
+@import 'EXT:pxa_product_manager/ext_typoscript_setup.txt'
+@import 'EXT:pxa_product_manager/Configuration/TypoScript/setup.typoscript'

@@ -3,82 +3,166 @@ services:
     autowire: true
     autoconfigure: true
     public: false
-
   Pixelant\PxaProductManager\:
-    resource: '../Classes/*'
-
+    resource: ../Classes/*
+    exclude:
+    - ../Classes/Domain/Model/*
+    - ../Classes/Domain/Resource/*
+    - ../Classes/Domain/Collection/Collection.php
+    - ../Classes/Attributes/ConfigurationProvider/*
+    - ../Classes/Event/*
+    - ../Classes/Hook/Solr/*
+    - ../Classes/Seo/XmlSitemap/*
+    - ../Classes/Service/TypolinkBuilderService.php
   Pixelant\PxaProductManager\Command\UpdateInheritanceCommand:
     tags:
-      - name: 'console.command'
-        command: 'productmanager:updateinheritance'
-
+    - name: console.command
+      command: productmanager:updateinheritance
   Pixelant\PxaProductManager\Command\UpdateRelationInheritanceIndexCommand:
     tags:
-      - name: 'console.command'
-        command: 'productmanager:updaterelationinheritanceindex'
-
+    - name: console.command
+      command: productmanager:updaterelationinheritanceindex
   Pixelant\PxaProductManager\Command\FixDuplicateAttributeValuesCommand:
     tags:
-      - name: 'console.command'
-        command: 'productmanager:fixduplicateattributevalues'
-
+    - name: console.command
+      command: productmanager:fixduplicateattributevalues
   Pixelant\PxaProductManager\Command\RemoveOrphanAttributeValuesCommand:
     tags:
-      - name: 'console.command'
-        command: 'productmanager:removeorphanattributevalues'
-
+    - name: console.command
+      command: productmanager:removeorphanattributevalues
   Pixelant\PxaProductManager\Event\DataInheritance\CalculateInlineFieldFileReferenceValueEvent:
     tags:
-      - name: event.listener
-        identifier: 'calculateInlineFieldFileReferenceValueEvent'
-        before: ''
-        event: Pixelant\PxaProductManager\Event\DataInheritance\CalculateInlineFieldValueEvent
-
+    - name: event.listener
+      identifier: calculateInlineFieldFileReferenceValueEvent
+      before: ''
+      event: Pixelant\PxaProductManager\Event\DataInheritance\CalculateInlineFieldValueEvent
   Pixelant\PxaProductManager\Event\DataInheritance\CalculateInlineFieldLinkValueEvent:
     tags:
-      - name: event.listener
-        identifier: 'calculateInlineFieldLinkValueEvent'
-        before: ''
-        event: Pixelant\PxaProductManager\Event\DataInheritance\CalculateInlineFieldValueEvent
-
+    - name: event.listener
+      identifier: calculateInlineFieldLinkValueEvent
+      before: ''
+      event: Pixelant\PxaProductManager\Event\DataInheritance\CalculateInlineFieldValueEvent
   Pixelant\PxaProductManager\Event\DataInheritance\CalculateInlineFieldAttributeValueValueEvent:
     tags:
-      - name: event.listener
-        identifier: 'calculateInlineFieldAttributeValueValueEvent'
-        before: ''
-        event: Pixelant\PxaProductManager\Event\DataInheritance\CalculateInlineFieldValueEvent
-
+    - name: event.listener
+      identifier: calculateInlineFieldAttributeValueValueEvent
+      before: ''
+      event: Pixelant\PxaProductManager\Event\DataInheritance\CalculateInlineFieldValueEvent
   Pixelant\PxaProductManager\Event\DataInheritance\InheritNewInlineFileReferenceDataEvent:
     tags:
-      - name: event.listener
-        identifier: 'inheritNewInlineFileReferenceDataEvent'
-        before: ''
-        event: Pixelant\PxaProductManager\Event\DataInheritance\InheritNewInlineDataEvent
-
+    - name: event.listener
+      identifier: inheritNewInlineFileReferenceDataEvent
+      before: ''
+      event: Pixelant\PxaProductManager\Event\DataInheritance\InheritNewInlineDataEvent
   Pixelant\PxaProductManager\Event\DataInheritance\InheritNewInlineLinkDataEvent:
     tags:
-      - name: event.listener
-        identifier: 'inheritNewInlineLinkDataEvent'
-        before: ''
-        event: Pixelant\PxaProductManager\Event\DataInheritance\InheritNewInlineDataEvent
-
+    - name: event.listener
+      identifier: inheritNewInlineLinkDataEvent
+      before: ''
+      event: Pixelant\PxaProductManager\Event\DataInheritance\InheritNewInlineDataEvent
   Pixelant\PxaProductManager\Event\DataInheritance\InlineLinkIdentifierFieldEvent:
     tags:
-      - name: event.listener
-        identifier: 'inlineLinkIdentifierFieldEvent'
-        before: ''
-        event: Pixelant\PxaProductManager\Event\DataInheritance\InlineIdentifierFieldEvent
-
+    - name: event.listener
+      identifier: inlineLinkIdentifierFieldEvent
+      before: ''
+      event: Pixelant\PxaProductManager\Event\DataInheritance\InlineIdentifierFieldEvent
   Pixelant\PxaProductManager\Event\DataInheritance\InlineAttributeValueIdentifierFieldEvent:
     tags:
-      - name: event.listener
-        identifier: 'inlineAttributeValueIdentifierFieldEvent'
-        before: ''
-        event: Pixelant\PxaProductManager\Event\DataInheritance\InlineIdentifierFieldEvent
-
+    - name: event.listener
+      identifier: inlineAttributeValueIdentifierFieldEvent
+      before: ''
+      event: Pixelant\PxaProductManager\Event\DataInheritance\InlineIdentifierFieldEvent
   Pixelant\PxaProductManager\UserFunction\Solr\AbstractValue:
     public: true
   Pixelant\PxaProductManager\UserFunction\Solr\AttributeMultiValue:
     public: true
   Pixelant\PxaProductManager\UserFunction\Solr\AttributeValue:
     public: true
+  Pixelant\PxaProductManager\Domain\Repository\ProductTypeRepository:
+    public: true
+  Pixelant\PxaProductManager\Domain\Repository\AttributeRepository:
+    public: true
+  Pixelant\PxaProductManager\Domain\Repository\FilterRepository:
+    public: true
+  Pixelant\PxaProductManager\Domain\Repository\InheritanceQueueRepository:
+    public: true
+  Pixelant\PxaProductManager\Domain\Repository\OptionRepository:
+    public: true
+  Pixelant\PxaProductManager\Domain\Repository\RelationInheritanceIndexRepository:
+    public: true
+  Pixelant\PxaProductManager\Domain\Repository\AttributeSetRepository:
+    public: true
+  Pixelant\PxaProductManager\Domain\Repository\ProductRepository:
+    public: true
+  Pixelant\PxaProductManager\Domain\Repository\AttributeValueRepository:
+    public: true
+  Pixelant\PxaProductManager\Domain\Repository\PageRepository:
+    public: true
+  Pixelant\PxaProductManager\Domain\Repository\CategoryRepository:
+    public: true
+  Pixelant\PxaProductManager\Service\LazyLoading\ProductsQueryDispatcher:
+    public: true
+  Pixelant\PxaProductManager\Service\Category\TreeService:
+    public: true
+  Pixelant\PxaProductManager\Service\Url\UrlBuilderService:
+    public: true
+    shared: false
+    arguments:
+      $typoScriptFrontendController: null
+  Pixelant\PxaProductManager\Service\Resource\ResourceConverter:
+    public: true
+  Pixelant\PxaProductManager\Formatter\PriceFormatter:
+    public: true
+    arguments:
+      $request: null
+  Pixelant\PxaProductManager\Configuration\Site\SettingsReader:
+    public: true
+  Pixelant\PxaProductManager\Attributes\ValueUpdater\ValueUpdaterService:
+    public: true
+  Pixelant\PxaProductManager\UserFunction\Breadcrumbs:
+    public: true
+  Pixelant\PxaProductManager\UserFunction\Solr\MainImage:
+    public: true
+  Pixelant\PxaProductManager\UserFunction\Solr\ThumbnailImage:
+    public: true
+  Pixelant\PxaProductManager\UserFunction\Solr\Url:
+    public: true
+  Pixelant\PxaProductManager\UserFunction\TCA\CategoryUserFunction:
+    public: true
+  Pixelant\PxaProductManager\ViewHelpers\SvgViewHelper:
+    public: true
+  Pixelant\PxaProductManager\ViewHelpers\MetaTagViewHelper:
+    public: true
+  Pixelant\PxaProductManager\ViewHelpers\UriViewHelper:
+    public: true
+  Pixelant\PxaProductManager\ViewHelpers\ResourceEncodeViewHelper:
+    public: true
+  Pixelant\PxaProductManager\ViewHelpers\LinkViewHelper:
+    public: true
+  Pixelant\PxaProductManager\ViewHelpers\RenderMultipleViewHelper:
+    public: true
+  Pixelant\PxaProductManager\ViewHelpers\SetPageTitleViewHelper:
+    public: true
+  Pixelant\PxaProductManager\ViewHelpers\PageRendererViewHelper:
+    public: true
+  Pixelant\PxaProductManager\Attributes\ValueUpdater\UpdaterInterface:
+    alias: Pixelant\PxaProductManager\Attributes\ValueUpdater\ValueUpdaterService
+    public: true
+  Pixelant\PxaProductManager\Service\Url\UrlBuilderServiceInterface:
+    alias: Pixelant\PxaProductManager\Service\Url\UrlBuilderService
+    public: true
+  Pixelant\PxaProductManager\Hook\PageHookRelatedCategories:
+    tags:
+    - name: event.listener
+      identifier: pxa-product-manager-related-categories
+      event: TYPO3\CMS\Backend\Controller\Event\ModifyPageLayoutContentEvent
+  Pixelant\PxaProductManager\EventListener\AttributeTcaListener:
+    tags:
+    - name: event.listener
+      identifier: pxa-product-manager-runtime-attributes
+      event: TYPO3\CMS\Core\Core\Event\BootCompletedEvent
+  Pixelant\PxaProductManager\LinkHandler\LinkHandlingFormData:
+    tags:
+    - name: event.listener
+      identifier: pxa-product-manager-link-explanation
+      event: TYPO3\CMS\Backend\Form\Event\ModifyLinkExplanationEvent

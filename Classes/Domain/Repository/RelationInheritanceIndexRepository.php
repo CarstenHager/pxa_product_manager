@@ -87,7 +87,7 @@ class RelationInheritanceIndexRepository extends Repository
                     $queryBuilder->createNamedParameter($childParentTable)
                 )
             )
-            ->execute()
+            ->executeQuery()
             ->fetchOne();
     }
 
@@ -124,7 +124,7 @@ class RelationInheritanceIndexRepository extends Repository
                     $queryBuilder->createNamedParameter($childParentTable)
                 )
             )
-            ->execute()
+            ->executeQuery()
             ->fetchOne();
     }
 
@@ -172,7 +172,7 @@ class RelationInheritanceIndexRepository extends Repository
                 'child_parent_id' => $childParentId,
                 'child_parent_tablename' => $childParentTable,
             ])
-            ->execute();
+            ->executeStatement();
     }
 
     /**
@@ -206,6 +206,6 @@ class RelationInheritanceIndexRepository extends Repository
                     $queryBuilder->createNamedParameter($childParentTable)
                 )
             )
-            ->execute();
+            ->executeStatement();
     }
 }

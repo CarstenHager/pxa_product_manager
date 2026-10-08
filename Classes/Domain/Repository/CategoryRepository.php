@@ -44,17 +44,16 @@ class CategoryRepository extends Repository
      *
      * @var array
      */
-    protected $defaultOrderings = [
-        'sorting' => QueryInterface::ORDER_ASCENDING,
-    ];
+
 
     /**
      * Initializes the repository.
      */
     public function initializeObject(): void
     {
+        $this->setDefaultOrderings(['sorting' => QueryInterface::ORDER_ASCENDING]);
         /** @var Typo3QuerySettings $querySettings */
-        $querySettings = $this->objectManager->get(Typo3QuerySettings::class);
+        $querySettings = GeneralUtility::makeInstance(Typo3QuerySettings::class);
         $querySettings->setRespectStoragePage(false);
         $this->setDefaultQuerySettings($querySettings);
     }
@@ -84,10 +83,10 @@ class CategoryRepository extends Repository
                 )
             )
             ->where(
-                $queryBuilder->expr()->in('mm.uid_foreign', "(${subQuery})"),
+                $queryBuilder->expr()->in('mm.uid_foreign', $subQuery),
                 $queryBuilder->expr()->eq('mm.tablenames', $queryBuilder->createNamedParameter(
                     'tx_pxaproductmanager_domain_model_product',
-                    \PDO::PARAM_STR
+                    \TYPO3\CMS\Core\Database\Connection::PARAM_STR
                 )),
                 $queryBuilder->expr()->eq('mm.fieldname', $queryBuilder->createNamedParameter(
                     'categories',
@@ -95,7 +94,7 @@ class CategoryRepository extends Repository
                 ))
             )
             ->groupBy('category.uid')
-            ->execute()
-            ->fetchAll(\PDO::FETCH_COLUMN);
+            ->executeQuery()
+            ->fetchFirstColumn();
     }
 }

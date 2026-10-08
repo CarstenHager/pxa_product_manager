@@ -114,7 +114,7 @@ class TcaUtility
      */
     public static function getTcaFieldConfigurationAndRespectColumnsOverrides(string $table, string $field, array $row)
     {
-        $tcaFieldConf = $GLOBALS['TCA'][$table]['columns'][$field]['config'];
+        $tcaFieldConf = $GLOBALS['TCA'][$table]['columns'][$field]['config'] ?? [];
         $recordType = BackendUtility::getTCAtypeValue($table, $row);
         $columnsOverridesConfigOfField
             = $GLOBALS['TCA'][$table]['types'][$recordType]['columnsOverrides'][$field]['config'] ?? null;
@@ -164,4 +164,19 @@ class TcaUtility
 
         return $foreignTableWhere;
     }
+    /**
+     * Resolve an attribute UID from raw, selectSingle or legacy group FormData.
+     */
+    public static function getAttributeUid($value): int
+    {
+        if (is_array($value)) {
+            $value = $value[0] ?? 0;
+        }
+        if (is_array($value)) {
+            $value = $value['uid'] ?? 0;
+        }
+
+        return is_scalar($value) ? (int)$value : 0;
+    }
+
 }

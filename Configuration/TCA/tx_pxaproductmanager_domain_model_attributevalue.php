@@ -1,32 +1,8 @@
 <?php
 
-defined('TYPO3_MODE') || die('Access denied.');
+defined('TYPO3') || die('Access denied.');
 
-try {
-    $attributes = \Pixelant\PxaProductManager\Utility\AttributeUtility::findAllAttributes();
-} catch (\Doctrine\DBAL\Exception\TableNotFoundException $th) {
-    // catch TableNotFoundException to avoid exception when table isn't created yet.
-    $attributes = [];
-}
-
-$types = [
-    '0' => [
-        'showitem' => 'value',
-    ],
-];
-
-foreach ($attributes as $attribute) {
-    if ($attribute['uid'] === 0) {
-        continue;
-    }
-
-    $types[(string)$attribute['uid']] = [
-        'showitem' => 'value',
-        'columnsOverrides' => [
-            'value' => \Pixelant\PxaProductManager\Attributes\ConfigurationProvider\ConfigurationProviderFactory::create((int)$attribute['uid'])->get(),
-        ],
-    ];
-}
+$types = ['0' => ['showitem' => 'value']];
 
 return [
     'ctrl' => [
@@ -103,12 +79,11 @@ return [
         'attribute' => [
             'label' => 'Attribute',
             'config' => [
-                'type' => 'group',
-                'internal_type' => 'db',
-                'allowed' => 'tx_pxaproductmanager_domain_model_attribute',
-                'size' => 1,
-                'maxitems' => 1,
-                'minitems' => 0,
+                'type' => 'select',
+                'renderType' => 'selectSingle',
+                'foreign_table' => 'tx_pxaproductmanager_domain_model_attribute',
+                'items' => [],
+                'default' => 0,
             ],
         ],
         'product' => [

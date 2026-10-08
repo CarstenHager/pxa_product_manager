@@ -65,7 +65,7 @@ class AttributeValueRepository extends Repository
                 )
             )
             ->where(
-                $queryBuilder->expr()->in('attributevalue.product', "(${subQuery})"),
+                $queryBuilder->expr()->in('attributevalue.product', $subQuery),
                 $queryBuilder->expr()->in(
                     'attributes.type',
                     $queryBuilder->createNamedParameter(
@@ -75,8 +75,8 @@ class AttributeValueRepository extends Repository
                 )
             )
             ->groupBy('attributevalue.value')
-            ->execute()
-            ->fetchAll(\PDO::FETCH_COLUMN);
+            ->executeQuery()
+            ->fetchFirstColumn();
     }
 
     /**
@@ -96,12 +96,12 @@ class AttributeValueRepository extends Repository
             ->select('*')
             ->from('tx_pxaproductmanager_domain_model_attributevalue')
             ->where(
-                $expr->eq('product', $queryBuilder->createNamedParameter($productUid, \PDO::PARAM_INT)),
-                $expr->eq('attribute', $queryBuilder->createNamedParameter($attributeUid, \PDO::PARAM_INT))
+                $expr->eq('product', $queryBuilder->createNamedParameter($productUid, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)),
+                $expr->eq('attribute', $queryBuilder->createNamedParameter($attributeUid, \TYPO3\CMS\Core\Database\Connection::PARAM_INT))
             )
             ->setMaxResults(1)
-            ->execute()
-            ->fetch();
+            ->executeQuery()
+            ->fetchAssociative();
 
         return is_array($row) ? $row : null;
     }
@@ -129,14 +129,14 @@ class AttributeValueRepository extends Repository
                 $expr->eq('attributevalue.attribute', $queryBuilder->quoteIdentifier('attribute.uid'))
             )
             ->where(
-                $expr->eq('attributevalue.product', $queryBuilder->createNamedParameter($productUid, \PDO::PARAM_INT)),
+                $expr->eq('attributevalue.product', $queryBuilder->createNamedParameter($productUid, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)),
                 $expr->eq(
                     'attribute.identifier',
-                    $queryBuilder->createNamedParameter($identifier, \PDO::PARAM_STR)
+                    $queryBuilder->createNamedParameter($identifier, \TYPO3\CMS\Core\Database\Connection::PARAM_STR)
                 )
             )
-            ->execute()
-            ->fetch();
+            ->executeQuery()
+            ->fetchAssociative();
 
         return is_array($row) ? $row : null;
     }

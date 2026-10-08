@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Backend\FormDataProvider;
 
+use Pixelant\PxaProductManager\Utility\TcaUtility;
 use Pixelant\PxaProductManager\Domain\Collection\CanCreateCollection;
 use Pixelant\PxaProductManager\Domain\Repository\AttributeValueRepository;
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
@@ -74,7 +75,7 @@ class AttributeValueFormDataProvider implements FormDataProviderInterface
             $attributeValue['product']
         );
 
-        if (!$product['product_type'] || !$product['parent']) {
+        if (empty($product['product_type']) || empty($product['parent'])) {
             return $result;
         }
 
@@ -82,7 +83,7 @@ class AttributeValueFormDataProvider implements FormDataProviderInterface
 
         if (
             in_array(
-                'attribute.' . $attributeValue['attribute'][0]['uid'],
+                'attribute.' . TcaUtility::getAttributeUid($attributeValue['attribute'] ?? 0),
                 DataInheritanceUtility::getInheritedFieldsForProductType((int)$product['product_type']),
                 true
             )

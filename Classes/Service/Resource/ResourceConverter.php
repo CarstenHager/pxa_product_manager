@@ -4,25 +4,12 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Service\Resource;
 
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use Pixelant\PxaProductManager\Domain\Resource\ResourceInterface;
 use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 
 class ResourceConverter
 {
-    /**
-     * @var ObjectManager
-     */
-    protected ObjectManager $objectManager;
-
-    /**
-     * @param ObjectManager $objectManager
-     */
-    public function injectObjectManager(ObjectManager $objectManager): void
-    {
-        $this->objectManager = $objectManager;
-    }
-
     /**
      * Convert entity to array using resource.
      *
@@ -34,7 +21,14 @@ class ResourceConverter
     {
         $resource ??= $this->translateEntityNameToResourceName($entity);
         /** @var ResourceInterface $resourceInstance */
-        $resourceInstance = $this->objectManager->get($resource, $entity);
+        $resourceInstance = GeneralUtility::makeInstance($resource, $entity);
+
+        if ($resourceInstance instanceof \Pixelant\PxaProductManager\Domain\Resource\Product) {
+            $resourceInstance->injectConfigurationManagerInterface(GeneralUtility::makeInstance(\TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface::class));
+            $resourceInstance->injectImageService(GeneralUtility::makeInstance(\TYPO3\CMS\Extbase\Service\ImageService::class));
+            $resourceInstance->injectUrlBuilderServiceInterface(GeneralUtility::makeInstance(\Pixelant\PxaProductManager\Service\Url\UrlBuilderServiceInterface::class));
+            $resourceInstance->injectSettingsReader(GeneralUtility::makeInstance(\Pixelant\PxaProductManager\Configuration\Site\SettingsReader::class));
+        }
 
         return $resourceInstance->toArray();
     }

@@ -8,7 +8,6 @@ use Pixelant\PxaProductManager\Domain\Resource\ResourceInterface;
 use Pixelant\PxaProductManager\Service\Resource\ResourceConverter;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
 use TYPO3Fluid\Fluid\Core\ViewHelper\Traits\CompileWithRenderStatic;
@@ -57,7 +56,7 @@ class ResourceEncodeViewHelper extends AbstractViewHelper
     protected static function getConverter(): ResourceConverter
     {
         if (static::$converter === null) {
-            static::$converter = GeneralUtility::makeInstance(ObjectManager::class)->get(ResourceConverter::class);
+            static::$converter = GeneralUtility::makeInstance(ResourceConverter::class);
         }
 
         return self::$converter;

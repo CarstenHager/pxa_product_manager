@@ -162,6 +162,7 @@ CREATE TABLE tx_pxaproductmanager_attributeset_record_mm
     sorting         int(11)      DEFAULT '0' NOT NULL,
     sorting_foreign int(11)      DEFAULT '0' NOT NULL,
 
+    PRIMARY KEY (uid_local, uid_foreign, tablenames, fieldname),
     KEY uid_local_foreign (uid_local, uid_foreign),
     KEY uid_foreign_tablefield (uid_foreign, tablenames(40), fieldname(3), sorting_foreign)
 );

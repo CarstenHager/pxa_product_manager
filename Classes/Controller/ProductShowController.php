@@ -43,8 +43,9 @@ class ProductShowController extends AbstractController
      * @param Product $product
      * @param Category|null $category
      */
-    public function showAction(Product $product, Category $category = null): void
+    public function showAction(Product $product, Category $category = null): \Psr\Http\Message\ResponseInterface
     {
         $this->view->assignMultiple(compact('product', 'category'));
+        return $this->htmlResponse();
     }
 }

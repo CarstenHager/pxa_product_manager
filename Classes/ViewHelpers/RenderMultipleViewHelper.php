@@ -6,7 +6,6 @@ namespace Pixelant\PxaProductManager\ViewHelpers;
 
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Fluid\View\StandaloneView;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
 
@@ -58,20 +57,25 @@ class RenderMultipleViewHelper extends AbstractViewHelper
      */
     public function render(): ?string
     {
-        $config = $this->extbaseConfiguration['view']['renderingStacks'];
-        $renderingStack = $config[$this->arguments['key']] ?? false;
+        $config = $this->extbaseConfiguration['view']['renderingStacks'] ?? [];
+        $renderingStack = $config[$this->arguments['key'] ?? ''] ?? [];
 
-        if (empty($renderingStack)) {
+        if (!is_array($renderingStack) || $renderingStack === []) {
             return null;
         }
 
         $parts = 0;
         $output = '';
-        $childContent = false;
+        $childContent = [];
+        $this->arguments['arguments'] ??= [];
 
         krsort($renderingStack, SORT_NUMERIC);
 
         foreach ($renderingStack as $renderingParts) {
+            if (!is_array($renderingParts) || !is_string($renderingParts['template'] ?? null)
+                || $renderingParts['template'] === '') {
+                continue;
+            }
             if ($parts === 0) {
                 $this->arguments['arguments']['childContent'] = $this->renderChildren();
             } else {
@@ -99,14 +103,14 @@ class RenderMultipleViewHelper extends AbstractViewHelper
      */
     public function getView(string $path, array $arguments): string
     {
-        $objectManager = GeneralUtility::makeInstance(ObjectManager::class);
-        $view = $objectManager->get(StandaloneView::class);
+
+        $view = GeneralUtility::makeInstance(StandaloneView::class);
         $view->setFormat('html');
-        $view->setTemplateRootPaths($this->extbaseConfiguration['view']['templateRootPaths']);
-        $view->setPartialRootPaths($this->extbaseConfiguration['view']['partialRootPaths']);
-        $view->setLayoutRootPaths($this->extbaseConfiguration['view']['layoutRootPaths']);
+        $view->setTemplateRootPaths($this->extbaseConfiguration['view']['templateRootPaths'] ?? []);
+        $view->setPartialRootPaths($this->extbaseConfiguration['view']['partialRootPaths'] ?? []);
+        $view->setLayoutRootPaths($this->extbaseConfiguration['view']['layoutRootPaths'] ?? []);
         $view->setTemplate($path);
-        $view->assignMultiple($arguments['arguments']);
+        $view->assignMultiple($arguments['arguments'] ?? []);
 
         return $view->render();
     }

@@ -25,6 +25,7 @@ class ExtensionUtility extends \TYPO3\CMS\Extbase\Utility\ExtensionUtility
         $config = &$GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['extbase']['extensions'][$extensionName]['plugins'][$pluginName]['controllers'][$controllerClassName];
         // @codingStandardsIgnoreEnd
 
+        $config['actions'] ??= [];
         foreach ($actions as $action) {
             if (gettype($action) === 'string') {
                 $config['actions'][] = $action;
@@ -37,7 +38,7 @@ class ExtensionUtility extends \TYPO3\CMS\Extbase\Utility\ExtensionUtility
 
         $classNameArray = explode('\\', $controllerClassName);
         $controller = end($classNameArray);
-        $controllerAlias = current(explode('Controller', $controller));
+        $controllerAlias = explode('Controller', $controller, 2)[0];
 
         $config['alias'] = $controllerAlias;
         $config['className'] = $controllerClassName;

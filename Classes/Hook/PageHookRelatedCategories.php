@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Hook;
 
-use TYPO3\CMS\Backend\Controller\PageLayoutController;
+use TYPO3\CMS\Backend\Controller\Event\ModifyPageLayoutContentEvent;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
+use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -16,14 +17,22 @@ use TYPO3\CMS\Fluid\View\StandaloneView;
  */
 class PageHookRelatedCategories
 {
+    public function __invoke(ModifyPageLayoutContentEvent $event): void
+    {
+        $pageId = (int)($event->getRequest()->getQueryParams()['id'] ?? 0);
+        if ($pageId > 0) {
+            $event->addHeaderContent($this->renderForPage($pageId));
+        }
+    }
+
     /**
      * @param array $params
      * @param PageLayoutController $pageLayoutController
      * @return string
      */
-    public function render(array $params, PageLayoutController $pageLayoutController): string
+    public function renderForPage(int $pageId): string
     {
-        $categories = $this->findCategoriesByContentPage((int)$pageLayoutController->id);
+        $categories = $this->findCategoriesByContentPage($pageId);
 
         if (empty($categories)) {
             return '';
@@ -73,7 +82,7 @@ class PageHookRelatedCategories
         return (string)$uriBuilder->buildUriFromRoute(
             'record_edit',
             [
-                "edit[sys_category][${categoryUid}]" => 'edit',
+                "edit[sys_category][{$categoryUid}]" => 'edit',
                 'returnUrl' => GeneralUtility::getIndpEnv('REQUEST_URI'),
             ],
             UriBuilder::ABSOLUTE_URL
@@ -100,10 +109,13 @@ class PageHookRelatedCategories
             ->where(
                 $queryBuilder->expr()->eq(
                     'pxapm_content_page',
-                    $queryBuilder->createNamedParameter($page, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter(
+                        $page,
+                        Connection::PARAM_INT
+                    )
                 )
             )
-            ->execute()
-            ->fetchAll();
+            ->executeQuery()
+            ->fetchAllAssociative();
     }
 }
