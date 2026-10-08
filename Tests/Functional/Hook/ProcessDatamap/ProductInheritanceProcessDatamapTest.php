@@ -20,7 +20,6 @@ use TYPO3\CMS\Core\Core\Bootstrap;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\StringUtility;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Persistence\Generic\Mapper\DataMapper;
 use TYPO3\CMS\Extbase\Persistence\Generic\Session;
 use TYPO3\CMS\Extbase\Persistence\ObjectStorage;
@@ -127,19 +126,15 @@ class ProductInheritanceProcessDatamapTest extends FunctionalTestCase
 
         Bootstrap::initializeLanguageObject();
 
-        $this->subject = GeneralUtility::makeInstance(ObjectManager::class)->get(DataHandler::class);
+        $this->subject = GeneralUtility::makeInstance(DataHandler::class);
 
-        $this->attributeRepository
-            = GeneralUtility::makeInstance(ObjectManager::class)->get(AttributeRepository::class);
+        $this->attributeRepository = GeneralUtility::makeInstance(AttributeRepository::class);
 
-        $this->attributeValueRepository
-            = GeneralUtility::makeInstance(ObjectManager::class)->get(AttributeValueRepository::class);
+        $this->attributeValueRepository = GeneralUtility::makeInstance(AttributeValueRepository::class);
 
-        $this->productRepository
-            = GeneralUtility::makeInstance(ObjectManager::class)->get(ProductRepository::class);
+        $this->productRepository = GeneralUtility::makeInstance(ProductRepository::class);
 
-        $this->productTypeRepository
-            = GeneralUtility::makeInstance(ObjectManager::class)->get(ProductTypeRepository::class);
+        $this->productTypeRepository = GeneralUtility::makeInstance(ProductTypeRepository::class);
     }
 
     /**
@@ -540,8 +535,7 @@ class ProductInheritanceProcessDatamapTest extends FunctionalTestCase
 
         $this->productRepository->update($localizedParentProduct);
 
-        $persistanceManager = GeneralUtility::makeInstance(ObjectManager::class)
-            ->get(PersistenceManagerInterface::class);
+        $persistanceManager = GeneralUtility::makeInstance(PersistenceManagerInterface::class);
         $persistanceManager->persistAll();
         $persistanceManager->clearState();
 
@@ -681,7 +675,7 @@ class ProductInheritanceProcessDatamapTest extends FunctionalTestCase
             $localizedProductId,
             '*'
         );
-        $dataMapper = GeneralUtility::makeInstance(ObjectManager::class)->get(DataMapper::class);
+        $dataMapper = GeneralUtility::makeInstance(DataMapper::class);
 
         return $dataMapper->map(Product::class, [$localizedProductRecord])[0];
     }
@@ -689,7 +683,7 @@ class ProductInheritanceProcessDatamapTest extends FunctionalTestCase
     protected function destroySession(): void
     {
         /** @var Session $session */
-        $session = GeneralUtility::makeInstance(ObjectManager::class)->get(Session::class);
+        $session = GeneralUtility::makeInstance(Session::class);
         $session->destroy();
     }
 

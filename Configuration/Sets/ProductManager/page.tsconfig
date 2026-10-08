@@ -1,0 +1,4 @@
+# Product Manager backend Page TSconfig for sites using the Product Manager set.
+# Keep the legacy file as the single source so classic installations and
+# site-set installations receive the same wizards, link handler and layouts.
+@import 'EXT:pxa_product_manager/Configuration/page.tsconfig'

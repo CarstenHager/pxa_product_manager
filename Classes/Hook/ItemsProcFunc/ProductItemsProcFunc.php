@@ -7,7 +7,6 @@ namespace Pixelant\PxaProductManager\Hook\ItemsProcFunc;
 use Pixelant\PxaProductManager\Domain\Repository\AttributeRepository;
 use Pixelant\PxaProductManager\Domain\Repository\AttributeSetRepository;
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
-use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Database\RelationHandler;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -32,35 +31,42 @@ class ProductItemsProcFunc extends GeneralItemsProcFunc
 
         $fields = $this->getFieldsForTable($configuration);
 
-        $attributesFieldTca = BackendUtility::getTcaFieldConfiguration(
-            AttributeSetRepository::TABLE_NAME,
-            'attributes'
-        );
+        // BackendUtility::getTcaFieldConfiguration() was removed in TYPO3 v14.
+        // TCA is already fully loaded when an itemsProcFunc is executed, so
+        // read the field configuration directly and fail closed if an
+        // integrator has removed the MM relation.
+        $attributesFieldTca = $GLOBALS['TCA'][AttributeSetRepository::TABLE_NAME]['columns']['attributes']['config'] ?? [];
+        $mmTable = (string)($attributesFieldTca['MM'] ?? '');
+        if ($mmTable === '') {
+            return $fields;
+        }
 
-        foreach ($configuration['row']['attribute_sets'] as $attributeSetId) {
+        $attributeSets = $configuration['row']['attribute_sets'] ?? [];
+        if (!is_array($attributeSets)) {
+            $attributeSets = GeneralUtility::intExplode(',', (string)$attributeSets, true);
+        }
+        foreach ($attributeSets as $attributeSetId) {
             /** @var RelationHandler $relationHandler */
             $relationHandler = GeneralUtility::makeInstance(RelationHandler::class);
             $relationHandler->start(
                 '',
                 AttributeRepository::TABLE_NAME,
-                $attributesFieldTca['MM'],
+                $mmTable,
                 $attributeSetId,
                 AttributeSetRepository::TABLE_NAME,
                 $attributesFieldTca
             );
 
-            if ($relationHandler->getFromDB()[AttributeRepository::TABLE_NAME] !== null) {
-                $attributeIds = array_column($relationHandler->getFromDB()[AttributeRepository::TABLE_NAME], 'uid');
-
-                foreach ($attributeIds as $attributeId) {
-                    $attribute = BackendUtility::getRecord(AttributeRepository::TABLE_NAME, $attributeId);
-
-                    $configuration['items'][] = [
-                        $attribute['label'],
-                        'attribute.' . $attributeId,
-                        $GLOBALS['TCA'][AttributeRepository::TABLE_NAME]['ctrl']['iconfile'],
-                    ];
+            $records = $relationHandler->getFromDB()[AttributeRepository::TABLE_NAME] ?? [];
+            foreach ($records as $attribute) {
+                if (!is_array($attribute) || empty($attribute['uid'])) {
+                    continue;
                 }
+                $fields['items'][] = [
+                    'label' => ($attribute['label'] ?? '') ?: ($attribute['name'] ?? ''),
+                    'value' => 'attribute.' . $attribute['uid'],
+                    'icon' => 'tcarecords-' . AttributeRepository::TABLE_NAME . '-default',
+                ];
             }
         }
 

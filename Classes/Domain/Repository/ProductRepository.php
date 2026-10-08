@@ -31,6 +31,7 @@ use Pixelant\PxaProductManager\Event\Repository\GetProductQueryBuilderEvent;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
 
@@ -65,22 +66,14 @@ class ProductRepository extends AbstractDemandRepository
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
             ->getQueryBuilderForTable(self::TABLE_NAME);
 
-        $selectFields = [
-            self::TABLE_NAME . '.uid',
-            self::TABLE_NAME . '.name',
-            self::TABLE_NAME . '.teaser',
-            self::TABLE_NAME . '.sku',
-            self::TABLE_NAME . '.price',
-            self::TABLE_NAME . '.singleview_page',
-            self::TABLE_NAME . '.images',
-            self::TABLE_NAME . '.product_type',
-        ];
+        $queryBuilder->setRestrictions(GeneralUtility::makeInstance(\TYPO3\CMS\Core\Database\Query\Restriction\FrontendRestrictionContainer::class));
+
+        $selectFields = [self::TABLE_NAME . '.*'];
 
         $selectFields = $this->addAdditionalSelectFields($selectFields);
 
         $queryBuilder
             ->select(...$selectFields)
-            ->addSelect()
             ->from(self::TABLE_NAME);
 
         $this->addStorageExpression($queryBuilder, $demand);
@@ -94,6 +87,8 @@ class ProductRepository extends AbstractDemandRepository
         $this->addOffset($queryBuilder, $demand);
 
         $this->addLanguageRestriction($queryBuilder);
+
+        $this->addOrderings($queryBuilder, $demand);
 
         $this->demandService->getSortBy([
             'tx_pxaproductmanager_domain_model_product' => 'tx_pxaproductmanager_domain_model_product',
@@ -115,8 +110,13 @@ class ProductRepository extends AbstractDemandRepository
     {
         $pageTreeStartingPoint = $demand->getPageTreeStartingPoint();
         if ($pageTreeStartingPoint) {
-            $pids = $GLOBALS['TSFE']->cObj->getTreeList($pageTreeStartingPoint * -1, 5);
-            $singleViewPages = GeneralUtility::intExplode(',', $pids, true);
+            $singleViewPages = GeneralUtility::makeInstance(PageRepository::class)
+                ->getPageIdsRecursive([(int)$pageTreeStartingPoint], 5);
+
+            if ($singleViewPages === []) {
+                $queryBuilder->andWhere('1=0');
+                return;
+            }
 
             $queryBuilder->andWhere(
                 $queryBuilder->expr()->in(
@@ -157,7 +157,7 @@ class ProductRepository extends AbstractDemandRepository
                     'pages.uid',
                     $parentQueryBuilder->createNamedParameter(
                         $singleViewPageIds,
-                        \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY
+                        \Doctrine\DBAL\ArrayParameterType::INTEGER
                     )
                 )
             )
@@ -185,23 +185,23 @@ class ProductRepository extends AbstractDemandRepository
         $expressionBuilder = $queryBuilder->expr();
 
         if ($conjunction === 'and') {
-            $function = 'andX';
+            $function = 'and';
         } else {
-            $function = 'orX';
+            $function = 'or';
         }
 
         $conditions = $expressionBuilder->{$function}();
 
         foreach ($values as $value) {
-            $conditions->add(
-                $expressionBuilder->orX(
+            $conditions = $conditions->with(
+                $expressionBuilder->or(
                     $expressionBuilder->eq(
                         'tpdmav.value',
-                        $parentQueryBuilder->createNamedParameter($value, \PDO::PARAM_INT)
+                        $parentQueryBuilder->createNamedParameter($value, \Doctrine\DBAL\ParameterType::INTEGER)
                     ),
                     $expressionBuilder->inSet(
                         'tpdmav.value',
-                        $parentQueryBuilder->createNamedParameter($value, \PDO::PARAM_STR)
+                        $expressionBuilder->literal((string)(int)$value)
                     )
                 )
             );
@@ -221,7 +221,7 @@ class ProductRepository extends AbstractDemandRepository
             ->where(
                 $queryBuilder->expr()->eq(
                     'tpdma.uid',
-                    $parentQueryBuilder->createNamedParameter($attributeId, \PDO::PARAM_INT)
+                    $parentQueryBuilder->createNamedParameter($attributeId, \Doctrine\DBAL\ParameterType::INTEGER)
                 ),
             )
             ->andWhere($conditions)
@@ -245,61 +245,25 @@ class ProductRepository extends AbstractDemandRepository
         QueryBuilder $parentQueryBuilder,
         string $conjunction
     ): string {
-        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-            ->getQueryBuilderForTable('sys_category');
-
-        $expressionBuilder = $queryBuilder->expr();
-
-        if ($conjunction === 'and') {
-            $function = 'andX';
-        } else {
-            $function = 'orX';
-        }
-
-        $conditions = $expressionBuilder->{$function}();
-
-        foreach ($values as $value) {
-            $conditions->add(
-                $expressionBuilder->eq(
-                    'sc.uid',
-                    $parentQueryBuilder->createNamedParameter((int)$value, \PDO::PARAM_INT)
-                )
-            );
-        }
-
-        $subQuery = $queryBuilder->select('scrm.uid_foreign')
-            ->from('sys_category', 'sc')
-            ->join(
-                'sc',
-                'sys_category_record_mm',
-                'scrm',
-                $queryBuilder->expr()->eq(
-                    'scrm.uid_local',
-                    $queryBuilder->quoteIdentifier('sc.uid')
-                )
-            )
+        $values = array_values(array_unique(array_map('intval', (array)$values)));
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('sys_category');
+        $queryBuilder->select('scrm.uid_foreign')->from('sys_category', 'sc')
+            ->join('sc', 'sys_category_record_mm', 'scrm', $queryBuilder->expr()->eq('scrm.uid_local', $queryBuilder->quoteIdentifier('sc.uid')))
             ->where(
-                $conditions
-            )
-            ->andWhere(
+                $queryBuilder->expr()->in('sc.uid', $parentQueryBuilder->createNamedParameter($values, \Doctrine\DBAL\ArrayParameterType::INTEGER)),
                 $queryBuilder->expr()->eq(
                     'scrm.tablenames',
-                    $parentQueryBuilder->createNamedParameter(
-                        self::TABLE_NAME,
-                        \PDO::PARAM_STR
-                    )
+                    $parentQueryBuilder->createNamedParameter(self::TABLE_NAME, \Doctrine\DBAL\ParameterType::STRING)
                 ),
                 $queryBuilder->expr()->eq(
                     'scrm.fieldname',
-                    $parentQueryBuilder->createNamedParameter(
-                        'categories',
-                        \PDO::PARAM_STR
-                    )
+                    $parentQueryBuilder->createNamedParameter('categories', \Doctrine\DBAL\ParameterType::STRING)
                 )
-            )
-            ->groupBy('scrm.uid_foreign');
-
-        return $subQuery->getSQL();
+            )->groupBy('scrm.uid_foreign');
+        if ($conjunction === 'and' && $values !== []) {
+            $queryBuilder->having('COUNT(DISTINCT scrm.uid_local) = ' . count($values));
+        }
+        return $queryBuilder->getSQL();
     }
 
     /**
@@ -319,9 +283,9 @@ class ProductRepository extends AbstractDemandRepository
         $conjunction = $demand->getFilterConjunction();
 
         if ($conjunction === 'and') {
-            $function = 'andX';
+            $function = 'and';
         } else {
-            $function = 'orX';
+            $function = 'or';
         }
 
         $expressionBuilder = $queryBuilder->expr();
@@ -329,28 +293,40 @@ class ProductRepository extends AbstractDemandRepository
         $conditions = $expressionBuilder->{$function}();
 
         foreach ($filters as $filterData) {
+            if (!is_array($filterData) || !isset($filterData['type'], $filterData['value'])
+                || !is_array($filterData['value'])) {
+                $queryBuilder->andWhere('1=0');
+                continue;
+            }
             $type = (int)$filterData['type'];
-            $conjunction = $filterData['conjunction'];
+            $conjunction = ($filterData['conjunction'] ?? 'and') === 'or' ? 'or' : 'and';
             $value = $filterData['value'];
+            if ($value === []) {
+                continue;
+            }
 
             if ($type === Filter::TYPE_CATEGORIES) {
-                $conditions->add(
+                $conditions = $conditions->with(
                     $queryBuilder->expr()->in(
                         'uid',
-                        $this->getCategoriesSubQuery((int)$filterData['attribute'], $value, $queryBuilder, $conjunction)
+                        $this->getCategoriesSubQuery((int)($filterData['attribute'] ?? 0), $value, $queryBuilder, $conjunction)
                     )
                 );
             } elseif ($type === Filter::TYPE_ATTRIBUTES) {
-                $conditions->add(
+                $conditions = $conditions->with(
                     $queryBuilder->expr()->in(
                         'uid',
-                        $this->getAttributeSubQuery((int)$filterData['attribute'], $value, $queryBuilder, $conjunction)
+                        $this->getAttributeSubQuery((int)($filterData['attribute'] ?? 0), $value, $queryBuilder, $conjunction)
                     )
                 );
+            } else {
+                $queryBuilder->andWhere('1=0');
             }
         }
 
-        $queryBuilder->andWhere($conditions);
+        if (count($conditions) > 0) {
+            $queryBuilder->andWhere($conditions);
+        }
     }
 
     /**
@@ -362,10 +338,11 @@ class ProductRepository extends AbstractDemandRepository
     protected function addAdditionalSelectFields(array $selectFields): array
     {
         // Fetch listView settings.
-        $listViewSettings = $this->configurationManager->getConfiguration(
+        $configuration = (array)$this->configurationManager->getConfiguration(
             ConfigurationManagerInterface::CONFIGURATION_TYPE_SETTINGS,
             'PxaProductManager'
-        )['listView'] ?? [];
+        );
+        $listViewSettings = (array)($configuration['listView'] ?? []);
 
         // If any additionalFields are set, we need to add them to selectFields.
         if (!empty($listViewSettings['additionalFields'])) {
@@ -395,11 +372,13 @@ class ProductRepository extends AbstractDemandRepository
     {
         $languageId = GeneralUtility::makeInstance(Context::class)->getAspect('language')->getId();
 
+        $languageField = (string)($GLOBALS['TCA'][self::TABLE_NAME]['ctrl']['languageField'] ?? '');
+        if ($languageField === '') {
+            return;
+        }
+
         $queryBuilder->andWhere(
-            $queryBuilder->expr()->in(
-                $GLOBALS['TCA'][self::TABLE_NAME]['ctrl']['languageField'],
-                [$languageId, -1]
-            )
+            $queryBuilder->expr()->in($languageField, [$languageId, -1])
         );
     }
 }

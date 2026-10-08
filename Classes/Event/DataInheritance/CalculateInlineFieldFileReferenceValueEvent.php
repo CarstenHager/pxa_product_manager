@@ -19,11 +19,12 @@ class CalculateInlineFieldFileReferenceValueEvent
     {
         if ($event->getTable() === 'sys_file_reference') {
             // Use the field uid_local, points to the actual sys_file.
-            $value = BackendUtility::getRecord(
+            $record = BackendUtility::getRecord(
                 $event->getTable(),
                 $event->getId(),
                 'uid_local'
-            )['uid_local'] ?? '';
+            ) ?? [];
+            $value = $record['uid_local'] ?? '';
 
             if (!empty($value)) {
                 $event->setValue((string)$value);

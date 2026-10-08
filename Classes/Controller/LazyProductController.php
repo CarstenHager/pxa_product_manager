@@ -59,15 +59,16 @@ class LazyProductController extends AbstractController
      *
      * @return void
      */
-    public function listAction(): void
+    public function listAction(): \Psr\Http\Message\ResponseInterface
     {
         // Selected filters
-        $filters = $this->findRecordsByList($this->settings['filtering']['filters'], $this->filterRepository);
+        $filters = $this->findRecordsByList((string)($this->settings['filtering']['filters'] ?? ''), $this->filterRepository);
 
         $this->view->assign('menu', $this->generateMenu());
         $this->view->assign('filters', $filters);
         $this->view->assign('orderBy', json_encode($this->createOrderByArray()));
         $this->view->assign('settingsJson', json_encode($this->lazyListSettings()));
+        return $this->htmlResponse();
     }
 
     /**
@@ -81,16 +82,16 @@ class LazyProductController extends AbstractController
         if (!empty($this->settings['pageTreeStartingPoint'])) {
             $pageTreeStartingPoint = $this->settings['pageTreeStartingPoint'];
         } else {
-            $pageTreeStartingPoint = $this->getTypoScriptFrontendController()->id;
+            $pageTreeStartingPoint = $this->getCurrentPageId();
         }
 
         return [
             'storagePid' => $this->storagePid(),
             'pageTreeStartingPoint' => $pageTreeStartingPoint,
-            'limit' => (int)$this->settings['limit'],
-            'filterConjunction' => $this->settings['filtering']['conjunction'],
-            'hideFilterOptionsNoResult' => (int)$this->settings['filtering']['hideFilterOptionsNoResult'],
-        ] + $this->settings['productOrderings'];
+            'limit' => $this->getListLimit(),
+            'filterConjunction' => $this->settings['filtering']['conjunction'] ?? 'and',
+            'hideFilterOptionsNoResult' => (int)($this->settings['filtering']['hideFilterOptionsNoResult'] ?? 0),
+        ] + $this->getProductOrderings();
     }
 
     /**

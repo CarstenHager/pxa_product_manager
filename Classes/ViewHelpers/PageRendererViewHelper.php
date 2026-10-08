@@ -6,14 +6,10 @@ namespace Pixelant\PxaProductManager\ViewHelpers;
 
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
-use TYPO3Fluid\Fluid\Core\ViewHelper\Traits\CompileWithRenderStatic;
 
 class PageRendererViewHelper extends AbstractViewHelper
 {
-    use CompileWithRenderStatic;
-
     /**
      * View helper arguments.
      */
@@ -26,20 +22,18 @@ class PageRendererViewHelper extends AbstractViewHelper
     }
 
     /**
-     * @param array $arguments
-     * @param \Closure $renderChildrenClosure
-     * @param RenderingContextInterface $renderingContext
-     * @return mixed|void
+     * Register configured assets with the page renderer.
      */
-    public static function renderStatic(
-        array $arguments,
-        \Closure $renderChildrenClosure,
-        RenderingContextInterface $renderingContext
-    ): void {
-        $includeJSFooterlibs = $arguments['includeJSFooterlibs'] ?? [];
-        $includeJSFooter = $arguments['includeJSFooter'] ?? [];
-        $cssLibs = $arguments['cssLibs'] ?? [];
-        $inlineLanguageLabelFiles = $arguments['inlineLanguageLabelFiles'] ?? [];
+    public function render(): string
+    {
+        $includeJSFooterlibs = $this->arguments['includeJSFooterlibs'] ?? [];
+        $includeJSFooter = $this->arguments['includeJSFooter'] ?? [];
+        $cssLibs = $this->arguments['cssLibs'] ?? [];
+        $inlineLanguageLabelFiles = $this->arguments['inlineLanguageLabelFiles'] ?? [];
+        $includeJSFooterlibs = is_array($includeJSFooterlibs) ? $includeJSFooterlibs : [$includeJSFooterlibs];
+        $includeJSFooter = is_array($includeJSFooter) ? $includeJSFooter : [$includeJSFooter];
+        $cssLibs = is_array($cssLibs) ? $cssLibs : [$cssLibs];
+        $inlineLanguageLabelFiles = is_array($inlineLanguageLabelFiles) ? $inlineLanguageLabelFiles : [$inlineLanguageLabelFiles];
 
         $pageRenderer = GeneralUtility::makeInstance(PageRenderer::class);
 
@@ -55,5 +49,7 @@ class PageRendererViewHelper extends AbstractViewHelper
         foreach ($inlineLanguageLabelFiles as $inlineLanguageLabelFile) {
             $pageRenderer->addInlineLanguageLabelFile($inlineLanguageLabelFile, 'js.');
         }
+
+        return '';
     }
 }

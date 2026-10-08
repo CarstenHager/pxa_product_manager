@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Backend\FormEngine\FieldInformation;
 
+use Pixelant\PxaProductManager\Utility\TcaUtility;
 use Pixelant\PxaProductManager\Domain\Repository\AttributeValueRepository;
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
 use Pixelant\PxaProductManager\Utility\DataInheritanceUtility;
@@ -22,20 +23,22 @@ class InheritedProductFieldInformation extends AbstractNode
     public function render(): array
     {
         $result = $this->initializeResultArray();
+        $tableName = (string)($this->data['tableName'] ?? '');
+        $databaseRow = (array)($this->data['databaseRow'] ?? []);
 
-        if ($this->data['tableName'] === ProductRepository::TABLE_NAME) {
-            $fieldName = $this->data['fieldName'];
-            $productType = $this->data['databaseRow']['product_type'];
-        } elseif ($this->data['tableName'] === AttributeValueRepository::TABLE_NAME) {
-            $attributeValue = $this->data['databaseRow'];
+        if ($tableName === ProductRepository::TABLE_NAME) {
+            $fieldName = (string)($this->data['fieldName'] ?? '');
+            $productType = $databaseRow['product_type'] ?? 0;
+        } elseif ($tableName === AttributeValueRepository::TABLE_NAME) {
+            $attributeValue = $databaseRow;
 
             $product = BackendUtility::getRecord(
                 ProductRepository::TABLE_NAME,
-                $attributeValue['product']
-            );
+                (int)($attributeValue['product'] ?? 0)
+            ) ?? [];
 
-            $fieldName = 'attribute.' . $attributeValue['attribute'][0]['uid'];
-            $productType = $product['product_type'];
+            $fieldName = 'attribute.' . TcaUtility::getAttributeUid($attributeValue['attribute'] ?? 0);
+            $productType = $product['product_type'] ?? 0;
         } else {
             return $result;
         }

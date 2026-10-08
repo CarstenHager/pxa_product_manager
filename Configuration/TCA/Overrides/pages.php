@@ -1,9 +1,10 @@
 <?php
 
-defined('TYPO3_MODE') || die;
+defined('TYPO3') || die;
 
 (function (): void {
     $pdDokType = \Pixelant\PxaProductManager\Domain\Repository\PageRepository::DOKTYPE_PRODUCT_DISPLAY;
+    $defaultPageShowitem = (string)($GLOBALS['TCA']['pages']['types'][\TYPO3\CMS\Core\Domain\Repository\PageRepository::DOKTYPE_DEFAULT]['showitem'] ?? '');
     // Add new page type as possible select item:
     \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::addTcaSelectItem(
         'pages',
@@ -30,7 +31,8 @@ defined('TYPO3_MODE') || die;
             // add all page standard fields and tabs to your new page type
             'types' => [
                 (string)$pdDokType => [
-                    'showitem' => $GLOBALS['TCA']['pages']['types'][\TYPO3\CMS\Core\Domain\Repository\PageRepository::DOKTYPE_DEFAULT]['showitem'],
+                    'showitem' => $defaultPageShowitem,
+                    'allowedRecordTypes' => ['*'],
                 ],
             ],
         ]

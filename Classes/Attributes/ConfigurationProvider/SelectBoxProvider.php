@@ -22,14 +22,18 @@ class SelectBoxProvider extends AbstractProvider
 
         $options = [];
 
-        $attributeOptions = AttributeUtility::findAttributeOptions((int)$this->attribute['uid'], 'uid, value');
+        $attributeOptions = AttributeUtility::findAttributeOptions((int)($this->attribute['uid'] ?? 0), 'uid, value') ?? [];
         foreach ($attributeOptions as $option) {
-            $options[] = [$option['value'], $option['uid']];
+            $options[] = [
+                'label' => (string)($option['value'] ?? ''),
+                'value' => (int)($option['uid'] ?? 0),
+            ];
         }
 
         if (empty($options)) {
             // @codingStandardsIgnoreStart
-            $tca['label'] .= ' (This attribute has no options. Please configure the attribute and add some options to it.)';
+            $tca['label'] = (string)($tca['label'] ?? '')
+                . ' (This attribute has no options. Please configure the attribute and add some options to it.)';
             // @codingStandardsIgnoreEnd
         }
 

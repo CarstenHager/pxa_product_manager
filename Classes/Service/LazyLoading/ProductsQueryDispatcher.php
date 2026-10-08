@@ -105,8 +105,8 @@ class ProductsQueryDispatcher
 
         return (int)$queryBuilder
             ->count('tx_pxaproductmanager_domain_model_product.uid')
-            ->execute()
-            ->fetchColumn(0);
+            ->executeQuery()
+            ->fetchOne();
     }
 
     /**
@@ -132,14 +132,15 @@ class ProductsQueryDispatcher
     {
         $sql = $queryBuilder->getSQL();
         $parameters = $queryBuilder->getParameters();
+        $stringParams = [];
         foreach ($parameters as $key => $parameter) {
             switch ($queryBuilder->getParameterType($key)) {
-                case 1:
+                case \Doctrine\DBAL\ParameterType::INTEGER:
                     $stringParams[':' . $key] = (int)$parameter;
 
                     break;
-                case 101:
-                    $stringParams[':' . $key] = implode(',', $parameter);
+                case \Doctrine\DBAL\ArrayParameterType::INTEGER:
+                    $stringParams[':' . $key] = $parameter === [] ? 'NULL' : implode(',', array_map('intval', $parameter));
 
                     break;
                 default:

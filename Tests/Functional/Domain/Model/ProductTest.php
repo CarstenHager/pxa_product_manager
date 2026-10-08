@@ -6,7 +6,6 @@ use Nimut\TestingFramework\TestCase\FunctionalTestCase;
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
 use Pixelant\PxaProductManager\Tests\Utility\TestsUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 
 class ProductTest extends FunctionalTestCase
 {
@@ -24,7 +23,7 @@ class ProductTest extends FunctionalTestCase
     {
         parent::setUp();
 
-        $this->repository = GeneralUtility::makeInstance(ObjectManager::class)->get(ProductRepository::class);
+        $this->repository = GeneralUtility::makeInstance(ProductRepository::class);
     }
 
     /**

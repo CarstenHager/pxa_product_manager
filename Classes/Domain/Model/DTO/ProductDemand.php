@@ -152,7 +152,10 @@ class ProductDemand extends AbstractDemand
     public function hasFiltersCategoryFilter(): bool
     {
         foreach ($this->filters as $filter) {
-            if ((int)$filter['type'] === Filter::TYPE_CATEGORIES && !empty($filter['value'])) {
+            if (is_array($filter)
+                && (int)($filter['type'] ?? 0) === Filter::TYPE_CATEGORIES
+                && !empty($filter['value'])
+            ) {
                 return true;
             }
         }

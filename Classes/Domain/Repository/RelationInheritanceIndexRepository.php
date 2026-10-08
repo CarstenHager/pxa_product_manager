@@ -79,15 +79,24 @@ class RelationInheritanceIndexRepository extends Repository
             ->select('uid_parent')
             ->from(self::TABLE_NAME)
             ->where(
-                $queryBuilder->expr()->eq('uid_child', $queryBuilder->createNamedParameter($childUid)),
-                $queryBuilder->expr()->eq('tablename', $queryBuilder->createNamedParameter($tablename)),
-                $queryBuilder->expr()->eq('child_parent_id', $queryBuilder->createNamedParameter($childParentId)),
+                $queryBuilder->expr()->eq(
+                    'uid_child',
+                    $queryBuilder->createNamedParameter($childUid, \Doctrine\DBAL\ParameterType::INTEGER)
+                ),
+                $queryBuilder->expr()->eq(
+                    'tablename',
+                    $queryBuilder->createNamedParameter($tablename, \Doctrine\DBAL\ParameterType::STRING)
+                ),
+                $queryBuilder->expr()->eq(
+                    'child_parent_id',
+                    $queryBuilder->createNamedParameter($childParentId, \Doctrine\DBAL\ParameterType::INTEGER)
+                ),
                 $queryBuilder->expr()->eq(
                     'child_parent_tablename',
-                    $queryBuilder->createNamedParameter($childParentTable)
+                    $queryBuilder->createNamedParameter($childParentTable, \Doctrine\DBAL\ParameterType::STRING)
                 )
             )
-            ->execute()
+            ->executeQuery()
             ->fetchOne();
     }
 
@@ -116,15 +125,24 @@ class RelationInheritanceIndexRepository extends Repository
             ->select('uid_child')
             ->from(self::TABLE_NAME)
             ->where(
-                $queryBuilder->expr()->eq('uid_parent', $queryBuilder->createNamedParameter($parentUid)),
-                $queryBuilder->expr()->eq('tablename', $queryBuilder->createNamedParameter($tablename)),
-                $queryBuilder->expr()->eq('child_parent_id', $queryBuilder->createNamedParameter($childParentId)),
+                $queryBuilder->expr()->eq(
+                    'uid_parent',
+                    $queryBuilder->createNamedParameter($parentUid, \Doctrine\DBAL\ParameterType::INTEGER)
+                ),
+                $queryBuilder->expr()->eq(
+                    'tablename',
+                    $queryBuilder->createNamedParameter($tablename, \Doctrine\DBAL\ParameterType::STRING)
+                ),
+                $queryBuilder->expr()->eq(
+                    'child_parent_id',
+                    $queryBuilder->createNamedParameter($childParentId, \Doctrine\DBAL\ParameterType::INTEGER)
+                ),
                 $queryBuilder->expr()->eq(
                     'child_parent_tablename',
-                    $queryBuilder->createNamedParameter($childParentTable)
+                    $queryBuilder->createNamedParameter($childParentTable, \Doctrine\DBAL\ParameterType::STRING)
                 )
             )
-            ->execute()
+            ->executeQuery()
             ->fetchOne();
     }
 
@@ -172,7 +190,7 @@ class RelationInheritanceIndexRepository extends Repository
                 'child_parent_id' => $childParentId,
                 'child_parent_tablename' => $childParentTable,
             ])
-            ->execute();
+            ->executeStatement();
     }
 
     /**
@@ -198,14 +216,23 @@ class RelationInheritanceIndexRepository extends Repository
         $queryBuilder
             ->delete(self::TABLE_NAME)
             ->where(
-                $queryBuilder->expr()->eq('uid_parent', $queryBuilder->createNamedParameter($parentUid)),
-                $queryBuilder->expr()->eq('tablename', $queryBuilder->createNamedParameter($tablename)),
-                $queryBuilder->expr()->eq('child_parent_id', $queryBuilder->createNamedParameter($childParentId)),
+                $queryBuilder->expr()->eq(
+                    'uid_parent',
+                    $queryBuilder->createNamedParameter($parentUid, \Doctrine\DBAL\ParameterType::INTEGER)
+                ),
+                $queryBuilder->expr()->eq(
+                    'tablename',
+                    $queryBuilder->createNamedParameter($tablename, \Doctrine\DBAL\ParameterType::STRING)
+                ),
+                $queryBuilder->expr()->eq(
+                    'child_parent_id',
+                    $queryBuilder->createNamedParameter($childParentId, \Doctrine\DBAL\ParameterType::INTEGER)
+                ),
                 $queryBuilder->expr()->eq(
                     'child_parent_tablename',
-                    $queryBuilder->createNamedParameter($childParentTable)
+                    $queryBuilder->createNamedParameter($childParentTable, \Doctrine\DBAL\ParameterType::STRING)
                 )
             )
-            ->execute();
+            ->executeStatement();
     }
 }

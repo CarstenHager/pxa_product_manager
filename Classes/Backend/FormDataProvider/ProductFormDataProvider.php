@@ -35,7 +35,7 @@ class ProductFormDataProvider implements FormDataProviderInterface
     /**
      * @param BackendFlashMessage $flashMessage
      */
-    public function __construct(BackendFlashMessage $flashMessage = null)
+    public function __construct(?BackendFlashMessage $flashMessage = null)
     {
         $this->flashMessage = $flashMessage ?? GeneralUtility::makeInstance(BackendFlashMessage::class);
     }
@@ -46,7 +46,7 @@ class ProductFormDataProvider implements FormDataProviderInterface
      */
     public function addData(array $result): array
     {
-        if ($result['tableName'] !== ProductRepository::TABLE_NAME) {
+        if (($result['tableName'] ?? '') !== ProductRepository::TABLE_NAME) {
             return $result;
         }
 
@@ -65,28 +65,37 @@ class ProductFormDataProvider implements FormDataProviderInterface
      */
     protected function handleInheritedFields(array $result)
     {
-        $parentRow = isset($result['databaseRow']['parent'][0]) ? $result['databaseRow']['parent'][0]['row'] : [];
+        $databaseRow = (array)($result['databaseRow'] ?? []);
+        $parentRow = isset($databaseRow['parent'][0]['row']) ? (array)$databaseRow['parent'][0]['row'] : [];
 
-        if (!$result['databaseRow']['product_type'] || !$parentRow) {
+        if (empty($databaseRow['product_type']) || !$parentRow) {
             return $result;
         }
 
-        $inheritFields = DataInheritanceUtility::getInheritedFieldsForProductType(
-            (int)$result['databaseRow']['product_type'][0]
-        );
+        $productType = $databaseRow['product_type'] ?? 0;
+        if (is_array($productType)) {
+            $productType = $productType[0] ?? 0;
+        }
+        $inheritFields = DataInheritanceUtility::getInheritedFieldsForProductType((int)$productType);
 
-        foreach ($result['processedTca']['columns'] as $fieldName => &$configuration) {
+        foreach (($result['processedTca']['columns'] ?? []) as $fieldName => &$configuration) {
+            if (!is_array($configuration) || !is_array($configuration['config'] ?? null)) {
+                continue;
+            }
             if (!in_array($fieldName, $inheritFields, true)) {
+                $configuration['config']['fieldWizard'] ??= [];
                 $configuration['config']['fieldWizard']['productParentValue']['renderType'] = 'productParentValue';
 
                 continue;
             }
 
-            if ($configuration['config']['type'] === 'inline') {
+            if (($configuration['config']['type'] ?? '') === 'inline') {
+                $result['processedTca']['ctrl']['container']['inline']['fieldInformation'] ??= [];
                 // @codingStandardsIgnoreLine
                 $result['processedTca']['ctrl']['container']['inline']['fieldInformation']['inheritedProductField']['renderType']
                     = 'inheritedProductField';
             } else {
+                $configuration['config']['fieldInformation'] ??= [];
                 $configuration['config']['fieldInformation']['inheritedProductField']['renderType']
                     = 'inheritedProductField';
             }

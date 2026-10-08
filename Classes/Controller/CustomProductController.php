@@ -43,12 +43,12 @@ class CustomProductController extends AbstractController
     /**
      * Selection of products.
      */
-    public function listAction(): void
+    public function listAction(): \Psr\Http\Message\ResponseInterface
     {
-        switch ($this->settings['customProductsList']['mode']) {
+        switch ($this->settings['customProductsList']['mode'] ?? '') {
             case 'products':
                 $products = $this->findRecordsByList(
-                    $this->settings['customProductsList']['products'],
+                    (string)($this->settings['customProductsList']['products'] ?? ''),
                     $this->productRepository
                 );
 
@@ -60,6 +60,7 @@ class CustomProductController extends AbstractController
         }
 
         $this->view->assignMultiple(compact('products'));
+        return $this->htmlResponse();
     }
 
     /**

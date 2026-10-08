@@ -81,12 +81,7 @@ class Registry
     public function registerDefaultActions(): void
     {
         $scaKey = 'switchableControllerActions';
-        if (
-            isset($GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager'])
-            && !is_array($GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager'][$scaKey]['items'])
-        ) {
-            $GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager'][$scaKey]['items'] = [];
-        }
+        $this->ensureActionStorage($scaKey);
 
         foreach ($this->defaultSwitchableActions as $action) {
             $this->addSwitchableControllerAction(
@@ -112,8 +107,38 @@ class Registry
         array $flexforms = [],
         array $excludeFields = []
     ): void {
+        $this->ensureActionStorage('switchableControllerActions');
         $items = &$GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager']['switchableControllerActions']['items'];
         $items[$action] = compact('action', 'label', 'flexforms', 'excludeFields');
+    }
+
+    /**
+     * Ensure that the extension configuration has a writable action registry.
+     *
+     * This is intentionally defensive: integrators can load the registry
+     * before any EXTCONF entry exists, and TYPO3's warning-to-exception error
+     * handler would otherwise turn a missing nested key into a backend error.
+     */
+    private function ensureActionStorage(string $key): void
+    {
+        if (!isset($GLOBALS['TYPO3_CONF_VARS']['EXT']) || !is_array($GLOBALS['TYPO3_CONF_VARS']['EXT'])) {
+            $GLOBALS['TYPO3_CONF_VARS']['EXT'] = [];
+        }
+        if (
+            !isset($GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager'])
+            || !is_array($GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager'])
+        ) {
+            $GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager'] = [];
+        }
+        if (
+            !isset($GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager'][$key])
+            || !is_array($GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager'][$key])
+        ) {
+            $GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager'][$key] = [];
+        }
+        if (!is_array($GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager'][$key]['items'] ?? null)) {
+            $GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager'][$key]['items'] = [];
+        }
     }
 
     /**
@@ -147,6 +172,8 @@ class Registry
      */
     public function getAllRegisteredActions(): array
     {
-        return $GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager']['switchableControllerActions']['items'] ?? [];
+        $items = $GLOBALS['TYPO3_CONF_VARS']['EXT']['pxa_product_manager']['switchableControllerActions']['items'] ?? [];
+
+        return is_array($items) ? $items : [];
     }
 }

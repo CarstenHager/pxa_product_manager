@@ -6,14 +6,10 @@ namespace Pixelant\PxaProductManager\ViewHelpers;
 
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
-use TYPO3Fluid\Fluid\Core\ViewHelper\Traits\CompileWithRenderStatic;
 
 class MetaTagViewHelper extends AbstractViewHelper
 {
-    use CompileWithRenderStatic;
-
     /**
      * Arguments.
      */
@@ -25,21 +21,18 @@ class MetaTagViewHelper extends AbstractViewHelper
     }
 
     /**
-     * @param array $arguments
-     * @param \Closure $renderChildrenClosure
-     * @param RenderingContextInterface $renderingContext
-     * @return void
+     * Render and register a meta tag.
      */
-    public static function renderStatic(
-        array $arguments,
-        \Closure $renderChildrenClosure,
-        RenderingContextInterface $renderingContext
-    ): void {
-        $type = $arguments['type'];
-        $name = $arguments['name'];
-        $content = trim(strip_tags($arguments['content'] ?? $renderChildrenClosure()));
+    public function render(): string
+    {
+        // Fluid normally supplies all registered arguments.  Keep the view
+        // helper defensive nevertheless: malformed/legacy templates must not
+        // turn a missing optional argument into a PHP warning on TYPO3 14.
+        $type = (string)($this->arguments['type'] ?? 'name');
+        $name = (string)($this->arguments['name'] ?? '');
+        $content = trim(strip_tags((string)($this->arguments['content'] ?? $this->renderChildren())));
 
-        if (!empty($content)) {
+        if ($name !== '' && $content !== '') {
             static::getPageRenderer()->setMetaTag(
                 $type,
                 $name,
@@ -48,6 +41,8 @@ class MetaTagViewHelper extends AbstractViewHelper
                 true
             );
         }
+
+        return '';
     }
 
     /**

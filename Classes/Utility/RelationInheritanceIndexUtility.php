@@ -86,26 +86,26 @@ class RelationInheritanceIndexUtility
                     'tprii.tablename',
                     $queryBuilder->createNamedParameter(
                         'tx_pxaproductmanager_domain_model_attributevalue',
-                        \PDO::PARAM_STR
+                        \Doctrine\DBAL\ParameterType::STRING
                     )
                 ),
                 $queryBuilder->expr()->eq(
                     'tprii.child_parent_tablename',
                     $queryBuilder->createNamedParameter(
                         'tx_pxaproductmanager_domain_model_product',
-                        \PDO::PARAM_STR
+                        \Doctrine\DBAL\ParameterType::STRING
                     )
                 ),
                 $queryBuilder->expr()->eq(
                     'tprii.child_parent_id',
-                    $queryBuilder->createNamedParameter($childParentId, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter($childParentId, \Doctrine\DBAL\ParameterType::INTEGER)
                 ),
                 $queryBuilder->expr()->neq(
                     'child_product.parent',
                     'attrval_parent.product'
                 ),
             )
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         if (is_array($result)) {
@@ -134,19 +134,34 @@ class RelationInheritanceIndexUtility
         $queryBuilder
             ->delete(RelationInheritanceIndexRepository::TABLE_NAME)
             ->where(
-                $queryBuilder->expr()->eq('uid_parent', $queryBuilder->createNamedParameter($uidParent)),
-                $queryBuilder->expr()->eq('uid_child', $queryBuilder->createNamedParameter($uidChild)),
+                $queryBuilder->expr()->eq(
+                    'uid_parent',
+                    $queryBuilder->createNamedParameter($uidParent, \Doctrine\DBAL\ParameterType::INTEGER)
+                ),
+                $queryBuilder->expr()->eq(
+                    'uid_child',
+                    $queryBuilder->createNamedParameter($uidChild, \Doctrine\DBAL\ParameterType::INTEGER)
+                ),
                 $queryBuilder->expr()->eq(
                     'tablename',
-                    $queryBuilder->createNamedParameter(AttributeValueRepository::TABLE_NAME)
+                    $queryBuilder->createNamedParameter(
+                        AttributeValueRepository::TABLE_NAME,
+                        \Doctrine\DBAL\ParameterType::STRING
+                    )
                 ),
-                $queryBuilder->expr()->eq('child_parent_id', $queryBuilder->createNamedParameter($childParentId)),
+                $queryBuilder->expr()->eq(
+                    'child_parent_id',
+                    $queryBuilder->createNamedParameter($childParentId, \Doctrine\DBAL\ParameterType::INTEGER)
+                ),
                 $queryBuilder->expr()->eq(
                     'child_parent_tablename',
-                    $queryBuilder->createNamedParameter(ProductRepository::TABLE_NAME)
+                    $queryBuilder->createNamedParameter(
+                        ProductRepository::TABLE_NAME,
+                        \Doctrine\DBAL\ParameterType::STRING
+                    )
                 )
             )
-            ->execute();
+            ->executeStatement();
     }
 
     /**

@@ -49,7 +49,7 @@ class TestsUtility
         return $objects;
     }
 
-    public static function createEntity(string $className, $properties, callable $callback = null): AbstractEntity
+    public static function createEntity(string $className, $properties, ?callable $callback = null): AbstractEntity
     {
         /** @var \TYPO3\CMS\Extbase\DomainObject\AbstractEntity $entity */
         $entity = new $className();

@@ -5,13 +5,20 @@ declare(strict_types=1);
 namespace Pixelant\PxaProductManager\ViewHelpers;
 
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\View\ViewFactoryData;
+use TYPO3\CMS\Core\View\ViewFactoryInterface;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
-use TYPO3\CMS\Fluid\View\StandaloneView;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
 
 class RenderMultipleViewHelper extends AbstractViewHelper
 {
+    protected ViewFactoryInterface $viewFactory;
+
+    public function __construct(?ViewFactoryInterface $viewFactory = null)
+    {
+        $this->viewFactory = $viewFactory ?? GeneralUtility::makeInstance(ViewFactoryInterface::class);
+    }
+
     /**
      * @var array
      */
@@ -44,7 +51,7 @@ class RenderMultipleViewHelper extends AbstractViewHelper
         $configurationManager = GeneralUtility::makeInstance(ConfigurationManager::class);
         // Include ExtensionName and set PluginName to prevent missing extbaseConfiguration
         // when other plugins are rendered on the same page.
-        $this->extbaseConfiguration = $configurationManager->getConfiguration(
+        $this->extbaseConfiguration = (array)$configurationManager->getConfiguration(
             ConfigurationManager::CONFIGURATION_TYPE_FRAMEWORK,
             'PxaProductManager',
             'RenderMultiple'
@@ -54,24 +61,31 @@ class RenderMultipleViewHelper extends AbstractViewHelper
     /**
      * Render viewhelper.
      *
-     * @return string|null
+     * @return string
      */
-    public function render(): ?string
+    public function render(): string
     {
-        $config = $this->extbaseConfiguration['view']['renderingStacks'];
-        $renderingStack = $config[$this->arguments['key']] ?? false;
+        $config = (array)($this->extbaseConfiguration['view']['renderingStacks'] ?? []);
+        $key = (string)($this->arguments['key'] ?? '');
+        $renderingStack = $config[$key] ?? [];
 
-        if (empty($renderingStack)) {
-            return null;
+        if (!is_array($renderingStack) || $renderingStack === []) {
+            return '';
         }
 
         $parts = 0;
         $output = '';
-        $childContent = false;
+        $childContent = [];
+        $arguments = $this->arguments['arguments'] ?? [];
+        $this->arguments['arguments'] = is_array($arguments) ? $arguments : [];
 
         krsort($renderingStack, SORT_NUMERIC);
 
         foreach ($renderingStack as $renderingParts) {
+            if (!is_array($renderingParts) || !is_string($renderingParts['template'] ?? null)
+                || $renderingParts['template'] === '') {
+                continue;
+            }
             if ($parts === 0) {
                 $this->arguments['arguments']['childContent'] = $this->renderChildren();
             } else {
@@ -99,15 +113,15 @@ class RenderMultipleViewHelper extends AbstractViewHelper
      */
     public function getView(string $path, array $arguments): string
     {
-        $objectManager = GeneralUtility::makeInstance(ObjectManager::class);
-        $view = $objectManager->get(StandaloneView::class);
-        $view->setFormat('html');
-        $view->setTemplateRootPaths($this->extbaseConfiguration['view']['templateRootPaths']);
-        $view->setPartialRootPaths($this->extbaseConfiguration['view']['partialRootPaths']);
-        $view->setLayoutRootPaths($this->extbaseConfiguration['view']['layoutRootPaths']);
-        $view->setTemplate($path);
-        $view->assignMultiple($arguments['arguments']);
 
-        return $view->render();
+        $view = $this->viewFactory->create(new ViewFactoryData(
+            templateRootPaths: (array)($this->extbaseConfiguration['view']['templateRootPaths'] ?? []),
+            partialRootPaths: (array)($this->extbaseConfiguration['view']['partialRootPaths'] ?? []),
+            layoutRootPaths: (array)($this->extbaseConfiguration['view']['layoutRootPaths'] ?? []),
+            format: 'html',
+        ));
+        $view->assignMultiple($arguments['arguments'] ?? []);
+
+        return $view->render($path);
     }
 }

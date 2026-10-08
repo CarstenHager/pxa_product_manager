@@ -37,20 +37,21 @@ class ConfigurationProviderFactory
      * @return ProviderInterface
      * @throws \UnexpectedValueException
      */
-    public static function create(int $attributeId, array $attribute = null): ProviderInterface
+    public static function create(int $attributeId, ?array $attribute = null): ProviderInterface
     {
         if ($attribute === null) {
             $attribute = BackendUtility::getRecord(
                 AttributeRepository::TABLE_NAME,
                 $attributeId
-            );
+            ) ?? [];
         }
 
-        $className = self::TYPE_TO_PROVIDER[$attribute['type']] ?? null;
+        $type = $attribute['type'] ?? null;
+        $className = self::TYPE_TO_PROVIDER[$type] ?? null;
 
         if ($className === null) {
             throw new \UnexpectedValueException(
-                'Attribute with type "' . $attribute['type'] . '" not supported.',
+                'Attribute ' . $attributeId . ' is missing or has unsupported type "' . (string)$type . '".',
                 1568986135545
             );
         }

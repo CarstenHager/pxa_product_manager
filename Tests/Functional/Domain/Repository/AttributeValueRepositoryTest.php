@@ -5,7 +5,6 @@ namespace Pixelant\PxaProductManager\Tests\Functional\Domain\Repository;
 use Nimut\TestingFramework\TestCase\FunctionalTestCase;
 use Pixelant\PxaProductManager\Domain\Repository\AttributeValueRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 
 class AttributeValueRepositoryTest extends FunctionalTestCase
 {
@@ -23,7 +22,7 @@ class AttributeValueRepositoryTest extends FunctionalTestCase
     {
         parent::setUp();
 
-        $this->repository = GeneralUtility::makeInstance(ObjectManager::class)->get(AttributeValueRepository::class);
+        $this->repository = GeneralUtility::makeInstance(AttributeValueRepository::class);
     }
 
     /**

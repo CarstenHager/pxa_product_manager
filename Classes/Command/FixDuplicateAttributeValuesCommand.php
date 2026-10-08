@@ -53,8 +53,10 @@ class FixDuplicateAttributeValuesCommand extends Command
      * @param OutputInterface $output
      * @return int error code
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        \TYPO3\CMS\Core\Core\Bootstrap::initializeBackendAuthentication();
+        $GLOBALS['BE_USER']->initializeUserSessionManager();
         $io = new SymfonyStyle($input, $output);
         $io->title($this->getDescription());
 
@@ -195,12 +197,12 @@ class FixDuplicateAttributeValuesCommand extends Command
             ->where(
                 $queryBuilder->expr()->eq(
                     'deleted',
-                    $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter(0, \Doctrine\DBAL\ParameterType::INTEGER)
                 )
             )
             ->groupBy('product', 'attribute')
             ->having('cnt > 1')
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         return $records;
@@ -225,15 +227,15 @@ class FixDuplicateAttributeValuesCommand extends Command
             ->where(
                 $queryBuilder->expr()->eq(
                     'product',
-                    $queryBuilder->createNamedParameter($product, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter($product, \Doctrine\DBAL\ParameterType::INTEGER)
                 ),
                 $queryBuilder->expr()->eq(
                     'attribute',
-                    $queryBuilder->createNamedParameter($attribute, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter($attribute, \Doctrine\DBAL\ParameterType::INTEGER)
                 )
             )
             ->orderBy('tstamp', 'DESC')
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         return $records;
@@ -257,11 +259,11 @@ class FixDuplicateAttributeValuesCommand extends Command
             ->where(
                 $queryBuilder->expr()->eq(
                     'uid',
-                    $queryBuilder->createNamedParameter($id, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter($id, \Doctrine\DBAL\ParameterType::INTEGER)
                 )
             )
             ->orderBy('crdate')
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         return $records[0] ?? [];
@@ -276,6 +278,9 @@ class FixDuplicateAttributeValuesCommand extends Command
      */
     protected function determineAttributeValueScores(array &$attributeValues): void
     {
+        if ($attributeValues === [] || !isset($attributeValues[0]) || !is_array($attributeValues[0])) {
+            return;
+        }
         $values = array_column($attributeValues, 'value');
         $sysLanguageUid = array_column($attributeValues, 'sys_language_uid');
         $localizedFromUid = array_column($attributeValues, 'l10n_parent');
@@ -289,11 +294,12 @@ class FixDuplicateAttributeValuesCommand extends Command
         // All attribute values are fetched by attribute and product,
         // so all attribute values have same product.
         // Use first attribute value for product and attribute id.
-        $parentProduct = BackendUtility::getRecord(
+        $parentProductRecord = BackendUtility::getRecord(
             self::PRODUCT_TABLE,
             $attributeValues[0]['product'],
             'parent'
-        )['parent'] ?? [];
+        ) ?? [];
+        $parentProduct = $parentProductRecord['parent'] ?? 0;
 
         $parentAttribute = [];
         if (!empty($parentProduct)) {
@@ -313,14 +319,14 @@ class FixDuplicateAttributeValuesCommand extends Command
                 );
             }
 
-            $parentAttribute = $parentAttribute[0];
+            $parentAttribute = $parentAttribute[0] ?? [];
         }
 
         try {
             // Use index in score, attribute values are sorted in query.
             foreach ($attributeValues as $index => &$attributeValue) {
-                $attributeValue['parent_attribute_value'] = $parentAttribute['value'];
-                $attributeValue['parent_attribute_uid'] = $parentAttribute['uid'];
+                $attributeValue['parent_attribute_value'] = $parentAttribute['value'] ?? '';
+                $attributeValue['parent_attribute_uid'] = $parentAttribute['uid'] ?? 0;
                 $attributeValue['parent_product_uid'] = $parentProduct;
 
                 $attributeValue['score'] = $this->determineAttributeValueScore(
@@ -368,14 +374,14 @@ class FixDuplicateAttributeValuesCommand extends Command
         // AttributeValue value doesn't equal parent attributevalue value,
         // all duplicate attributevalues value are same and parent attributevalue value is not empty.
         if (
-            (string)$parentAttribute['value'] !== (string)$attributeValue['value']
+            (string)($parentAttribute['value'] ?? '') !== (string)($attributeValue['value'] ?? '')
             && $allValuesAreSame
             && !empty($parentAttribute)
         ) {
             throw new \Exception('Could not determine attribute score, no attribute values are correct. (Delete)?', 1);
         }
         // AttributeValue value equals parent attributevalue value, score + 100.
-        if ((string)$parentAttribute['value'] === (string)$attributeValue['value'] && !empty($parentAttribute)) {
+        if ((string)($parentAttribute['value'] ?? '') === (string)($attributeValue['value'] ?? '') && !empty($parentAttribute)) {
             $score += 100;
         }
 
@@ -440,7 +446,7 @@ class FixDuplicateAttributeValuesCommand extends Command
                 'product_attributevalue',
                 self::RELATION_INDEX_TABLE,
                 'tprii',
-                (string)$queryBuilder->expr()->andX(
+                (string)$queryBuilder->expr()->and(
                     $queryBuilder->expr()->eq(
                         'tprii.uid_child',
                         $queryBuilder->quoteIdentifier('product_attributevalue.uid')
@@ -453,14 +459,14 @@ class FixDuplicateAttributeValuesCommand extends Command
                         'tprii.child_parent_tablename',
                         $queryBuilder->createNamedParameter(
                             'tx_pxaproductmanager_domain_model_product',
-                            \PDO::PARAM_STR
+                            \Doctrine\DBAL\ParameterType::STRING
                         )
                     ),
                     $queryBuilder->expr()->eq(
                         'tprii.tablename',
                         $queryBuilder->createNamedParameter(
                             'tx_pxaproductmanager_domain_model_attributevalue',
-                            \PDO::PARAM_STR
+                            \Doctrine\DBAL\ParameterType::STRING
                         )
                     )
                 )
@@ -477,15 +483,15 @@ class FixDuplicateAttributeValuesCommand extends Command
             ->where(
                 $queryBuilder->expr()->eq(
                     'product_attributevalue.product',
-                    $queryBuilder->createNamedParameter($product, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter($product, \Doctrine\DBAL\ParameterType::INTEGER)
                 ),
                 $queryBuilder->expr()->eq(
                     'product_attributevalue.attribute',
-                    $queryBuilder->createNamedParameter($attribute, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter($attribute, \Doctrine\DBAL\ParameterType::INTEGER)
                 )
             )
             ->orderBy('product_attributevalue.tstamp', 'DESC')
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         return $records;
@@ -508,11 +514,11 @@ class FixDuplicateAttributeValuesCommand extends Command
             ->where(
                 $queryBuilder->expr()->eq(
                     'uid',
-                    $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter($uid, \Doctrine\DBAL\ParameterType::INTEGER)
                 )
             )
             ->set('value', $value)
-            ->execute();
+            ->executeStatement();
     }
 
     /**
@@ -532,9 +538,9 @@ class FixDuplicateAttributeValuesCommand extends Command
             ->where(
                 $queryBuilder->expr()->eq(
                     'uid',
-                    $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter($uid, \Doctrine\DBAL\ParameterType::INTEGER)
                 )
             )
-            ->execute();
+            ->executeStatement();
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Backend\FormDataProvider;
 
+use Pixelant\PxaProductManager\Utility\TcaUtility;
 use Pixelant\PxaProductManager\Domain\Collection\CanCreateCollection;
 use Pixelant\PxaProductManager\Domain\Repository\AttributeValueRepository;
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
@@ -37,7 +38,7 @@ class AttributeValueFormDataProvider implements FormDataProviderInterface
     /**
      * @param BackendFlashMessage $flashMessage
      */
-    public function __construct(BackendFlashMessage $flashMessage = null)
+    public function __construct(?BackendFlashMessage $flashMessage = null)
     {
         $this->flashMessage = $flashMessage ?? GeneralUtility::makeInstance(BackendFlashMessage::class);
     }
@@ -48,7 +49,7 @@ class AttributeValueFormDataProvider implements FormDataProviderInterface
      */
     public function addData(array $result): array
     {
-        if ($result['tableName'] !== AttributeValueRepository::TABLE_NAME) {
+        if (($result['tableName'] ?? '') !== AttributeValueRepository::TABLE_NAME) {
             return $result;
         }
 
@@ -67,42 +68,55 @@ class AttributeValueFormDataProvider implements FormDataProviderInterface
      */
     protected function handleInheritedFields(array $result)
     {
-        $attributeValue = $result['databaseRow'];
+        $attributeValue = (array)($result['databaseRow'] ?? []);
 
         $product = BackendUtility::getRecord(
             ProductRepository::TABLE_NAME,
-            $attributeValue['product']
-        );
+            (int)($attributeValue['product'] ?? 0)
+        ) ?? [];
 
-        if (!$product['product_type'] || !$product['parent']) {
+        if (empty($product['product_type']) || empty($product['parent'])) {
             return $result;
         }
 
+        $productType = $product['product_type'];
+        if (is_array($productType)) {
+            $productType = $productType[0] ?? 0;
+        }
+
+        if (!isset($result['processedTca']['columns']['value']) || !is_array($result['processedTca']['columns']['value'])) {
+            return $result;
+        }
         $configuration = &$result['processedTca']['columns']['value'];
+        $configuration['config'] ??= [];
 
         if (
             in_array(
-                'attribute.' . $attributeValue['attribute'][0]['uid'],
-                DataInheritanceUtility::getInheritedFieldsForProductType((int)$product['product_type']),
+                'attribute.' . TcaUtility::getAttributeUid($attributeValue['attribute'] ?? 0),
+                DataInheritanceUtility::getInheritedFieldsForProductType((int)$productType),
                 true
             )
         ) {
             $configuration['config']['readOnly'] = true;
 
-            if ($configuration['config']['type'] === 'inline') {
+            if (($configuration['config']['type'] ?? '') === 'inline') {
+                $result['processedTca']['ctrl']['container']['inline']['fieldInformation'] ??= [];
                 // @codingStandardsIgnoreLine
                 $result['processedTca']['ctrl']['container']['inline']['fieldInformation']['inheritedProductField']['renderType']
                     = 'inheritedProductField';
             } else {
+                $configuration['config']['fieldInformation'] ??= [];
                 $configuration['config']['fieldInformation']['inheritedProductField']['renderType']
                     = 'inheritedProductField';
             }
         } else {
-            if ($configuration['config']['type'] === 'inline') {
+            if (($configuration['config']['type'] ?? '') === 'inline') {
+                $result['processedTca']['ctrl']['container']['inline']['fieldWizard'] ??= [];
                 // @codingStandardsIgnoreLine
                 $result['processedTca']['ctrl']['container']['inline']['fieldWizard']['productParentValue']['renderType']
                     = 'productParentValue';
             } else {
+                $configuration['config']['fieldWizard'] ??= [];
                 $configuration['config']['fieldWizard']['productParentValue']['renderType']
                     = 'productParentValue';
             }

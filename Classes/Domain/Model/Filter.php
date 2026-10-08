@@ -28,6 +28,7 @@ namespace Pixelant\PxaProductManager\Domain\Model;
  */
 
 use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
+use TYPO3\CMS\Extbase\Attribute\ORM\Lazy;
 use TYPO3\CMS\Extbase\Persistence\Generic\LazyLoadingProxy;
 
 /**
@@ -60,14 +61,14 @@ class Filter extends AbstractEntity
 
     /**
      * @var \Pixelant\PxaProductManager\Domain\Model\Category
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
      */
+    #[Lazy]
     protected $category = null;
 
     /**
      * @var \Pixelant\PxaProductManager\Domain\Model\Attribute
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
      */
+    #[Lazy]
     protected $attribute = null;
 
     /**

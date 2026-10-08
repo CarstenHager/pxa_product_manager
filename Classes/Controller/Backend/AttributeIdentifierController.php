@@ -23,8 +23,13 @@ class AttributeIdentifierController
      */
     public function attributeIdentifierConvertAction(ServerRequestInterface $request): ResponseInterface
     {
-        $queryParameters = $request->getParsedBody();
-        $output = trim($queryParameters['value']);
+        $parsedBody = $request->getParsedBody();
+        $queryParameters = is_array($parsedBody) ? $parsedBody : [];
+        $value = $queryParameters['value'] ?? '';
+        if (!is_scalar($value)) {
+            return new JsonResponse(['success' => false, 'output' => ''], 400);
+        }
+        $output = trim((string)$value);
 
         if (!empty($output)) {
             $output = GeneralUtility::underscoredToLowerCamelCase(

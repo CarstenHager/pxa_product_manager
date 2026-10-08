@@ -7,8 +7,7 @@ namespace Pixelant\PxaProductManager\Tests\Unit\Service\Url;
 use Nimut\TestingFramework\TestCase\UnitTestCase;
 use Pixelant\PxaProductManager\Service\Url\UrlBuilderService;
 use Pixelant\PxaProductManager\Tests\Utility\TestsUtility;
-use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
-use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
+use TYPO3\CMS\Frontend\Typolink\LinkFactory;
 
 class UrlBuilderServiceTest extends UnitTestCase
 {
@@ -21,21 +20,7 @@ class UrlBuilderServiceTest extends UnitTestCase
     {
         parent::setUp();
 
-        // @codingStandardsIgnoreStart
-        $GLOBALS['TSFE'] = new class($this->createMock(ContentObjectRenderer::class)) extends TypoScriptFrontendController {
-            /** @codingStandardsIgnoreEnd */
-            public $cObj;
-
-            /**
-             * @param $cObj
-             */
-            public function __construct($cObj)
-            {
-                $this->cObj = $cObj;
-            }
-        };
-
-        $this->subject = new UrlBuilderService();
+        $this->subject = new UrlBuilderService($this->createMock(LinkFactory::class));
     }
 
     /**

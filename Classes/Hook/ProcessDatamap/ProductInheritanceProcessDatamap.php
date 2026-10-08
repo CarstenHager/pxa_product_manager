@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Hook\ProcessDatamap;
 
-use Doctrine\DBAL\FetchMode;
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
 use Pixelant\PxaProductManager\Utility\DataInheritanceUtility;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
@@ -71,7 +70,7 @@ class ProductInheritanceProcessDatamap
                 if (MathUtility::canBeInterpretedAsInteger($identifier)) {
                     $productId = (int)$identifier;
                 } else {
-                    $productId = (int)$dataHandler->substNEWwithIDs[$identifier];
+                    $productId = (int)($dataHandler->substNEWwithIDs[$identifier] ?? 0);
                 }
 
                 $language = $dataHandler
@@ -86,11 +85,12 @@ class ProductInheritanceProcessDatamap
                 ) ? (int)$dataHandler->datamap[ProductRepository::TABLE_NAME][$productId]['is_inherited'] : 0;
 
                 if (!empty($productId) && $inheritStatus === 0) {
-                    $parentProductId = (int)BackendUtility::getRecord(
+                    $parentRecord = BackendUtility::getRecord(
                         ProductRepository::TABLE_NAME,
                         $productId,
                         'parent'
-                    )['parent'] ?? 0;
+                    ) ?? [];
+                    $parentProductId = (int)($parentRecord['parent'] ?? 0);
 
                     // If current record is localized, we need to fetch children by default language.
                     // child products parent should always be the default product.
@@ -130,7 +130,7 @@ class ProductInheritanceProcessDatamap
 
                                 if (!empty($inheritdData)) {
                                     $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-                                    $dataHandler->start($inheritdData['data'], $inheritdData['cmd']);
+                                    $dataHandler->start($inheritdData['data'] ?? [], $inheritdData['cmd'] ?? []);
                                     $dataHandler->process_datamap();
                                     $dataHandler->process_cmdmap();
                                 }
@@ -161,6 +161,10 @@ class ProductInheritanceProcessDatamap
      */
     protected function generateMessage(int $productId, string $inheritedData): void
     {
+        // Command-line users have no browser session for flash messages.
+        if (\TYPO3\CMS\Core\Core\Environment::isCli()) {
+            return;
+        }
         $message = GeneralUtility::makeInstance(
             FlashMessage::class,
             sprintf(
@@ -172,7 +176,7 @@ class ProductInheritanceProcessDatamap
                 $inheritedData
             ),
             '',
-            FlashMessage::INFO,
+            \TYPO3\CMS\Core\Type\ContextualFeedbackSeverity::INFO,
             true
         );
 
@@ -191,7 +195,8 @@ class ProductInheritanceProcessDatamap
     {
         // If parent is set, fetch product_type from parent instead of relying on child.
         if (!empty($record['parent'])) {
-            $parent = (string)array_pop(explode('_', (string)$record['parent'] ?? ''));
+            $parentParts = explode('_', (string)($record['parent'] ?? ''));
+            $parent = (string)array_pop($parentParts);
             $productRow = BackendUtility::getRecord(
                 ProductRepository::TABLE_NAME,
                 $parent,
@@ -199,7 +204,7 @@ class ProductInheritanceProcessDatamap
             );
             if (
                 isset($productRow['product_type'])
-                && (int)$productRow['product_type'] !== (int)($record['product_type'])
+                && (int)$productRow['product_type'] !== (int)($record['product_type'] ?? 0)
             ) {
                 $record['product_type'] = (string)$productRow['product_type'];
             }
@@ -240,15 +245,15 @@ class ProductInheritanceProcessDatamap
                 ->where(
                     $queryBuilder->expr()->eq(
                         'parent',
-                        $queryBuilder->createNamedParameter($identifier)
+                        $queryBuilder->createNamedParameter($identifier, \Doctrine\DBAL\ParameterType::STRING)
                     ),
                     $queryBuilder->expr()->eq(
                         'sys_language_uid',
-                        $queryBuilder->createNamedParameter($language, \PDO::PARAM_INT)
+                        $queryBuilder->createNamedParameter($language, \Doctrine\DBAL\ParameterType::INTEGER)
                     )
                 )
-                ->execute()
-                ->fetchAll(FetchMode::COLUMN, 0);
+                ->executeQuery()
+                ->fetchFirstColumn();
         }
 
         return [];

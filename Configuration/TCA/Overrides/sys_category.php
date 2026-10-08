@@ -1,6 +1,6 @@
 <?php
 
-defined('TYPO3_MODE') || die;
+defined('TYPO3') || die;
 
 (function (): void {
     $ll = 'LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_db.xlf:';
@@ -8,7 +8,7 @@ defined('TYPO3_MODE') || die;
     $tempColumns = [
         'pxapm_keywords' => [
             'exclude' => 1,
-            'label' => $GLOBALS['TCA']['pages']['columns']['keywords']['label'],
+            'label' => $GLOBALS['TCA']['pages']['columns']['keywords']['label'] ?? $ll . 'sys_category.pxapm_keywords',
             'config' => [
                 'type' => 'text',
                 'cols' => 30,
@@ -58,7 +58,7 @@ defined('TYPO3_MODE') || die;
         'pxapm_image' => [
             'exclude' => true,
             'label' => $ll . 'sys_category.pxapm_image',
-            'config' => \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::getFileFieldTCAConfig(
+            'config' => \Pixelant\PxaProductManager\Utility\TcaFileFieldConfiguration::get(
                 'pxapm_image',
                 [
                     'appearance' => [
@@ -68,12 +68,12 @@ defined('TYPO3_MODE') || die;
                         'allowLanguageSynchronization' => true,
                     ],
                     'foreign_types' => [
-                        \TYPO3\CMS\Core\Resource\File::FILETYPE_UNKNOWN => [
+                        \TYPO3\CMS\Core\Resource\FileType::UNKNOWN->value => [
                             'showitem' => '
                             --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.basicoverlayPalette;basicoverlayPalette,
                             --palette--;;filePalette',
                         ],
-                        \TYPO3\CMS\Core\Resource\File::FILETYPE_IMAGE => [
+                        \TYPO3\CMS\Core\Resource\FileType::IMAGE->value => [
                             'showitem' => '
                             --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;imageoverlayPalette,
                             --palette--;;filePalette',
@@ -81,7 +81,7 @@ defined('TYPO3_MODE') || die;
                     ],
                     'maxitems' => 1,
                 ],
-                $GLOBALS['TYPO3_CONF_VARS']['GFX']['imagefile_ext']
+                (string)($GLOBALS['TYPO3_CONF_VARS']['GFX']['imagefile_ext'] ?? '')
             ),
         ],
         // This field is mainly used for sorting
@@ -141,7 +141,7 @@ defined('TYPO3_MODE') || die;
         'pxapm_banner_image' => [
             'exclude' => 1,
             'label' => $ll . 'sys_category.pxapm_banner_image',
-            'config' => \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::getFileFieldTCAConfig(
+            'config' => \Pixelant\PxaProductManager\Utility\TcaFileFieldConfiguration::get(
                 'pxapm_banner_image',
                 [
                     'appearance' => [
@@ -151,12 +151,12 @@ defined('TYPO3_MODE') || die;
                         'allowLanguageSynchronization' => true,
                     ],
                     'foreign_types' => [
-                        \TYPO3\CMS\Core\Resource\File::FILETYPE_UNKNOWN => [
+                        \TYPO3\CMS\Core\Resource\FileType::UNKNOWN->value => [
                             'showitem' => '
                             --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.basicoverlayPalette;basicoverlayPalette,
                             --palette--;;filePalette',
                         ],
-                        \TYPO3\CMS\Core\Resource\File::FILETYPE_IMAGE => [
+                        \TYPO3\CMS\Core\Resource\FileType::IMAGE->value => [
                             'showitem' => '
                             --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;imageoverlayPalette,
                             --palette--;;filePalette',
@@ -164,7 +164,7 @@ defined('TYPO3_MODE') || die;
                     ],
                     'maxitems' => 1,
                 ],
-                $GLOBALS['TYPO3_CONF_VARS']['GFX']['imagefile_ext']
+                (string)($GLOBALS['TYPO3_CONF_VARS']['GFX']['imagefile_ext'] ?? '')
             ),
         ],
         'pxapm_tax_rate' => [
@@ -295,8 +295,8 @@ defined('TYPO3_MODE') || die;
         'after:title'
     );
     $categoryWhere = \Pixelant\PxaProductManager\Utility\TcaUtility::getCategoriesTCAWhereClause();
-    if (!empty($categoryWhere)) {
+    if (!empty($categoryWhere) && isset($GLOBALS['TCA']['sys_category']['columns']['parent']['config'])) {
         $config = &$GLOBALS['TCA']['sys_category']['columns']['parent']['config'];
-        $config['foreign_table_where'] = $categoryWhere . ' ' . $config['foreign_table_where'];
+        $config['foreign_table_where'] = $categoryWhere . ' ' . ($config['foreign_table_where'] ?? '');
     }
 })();

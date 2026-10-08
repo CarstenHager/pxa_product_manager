@@ -5,8 +5,7 @@ mod.wizards.newContentElement.wizardItems.plugins {
             title = LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:be.extension.customproductlist.name
             description = LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:be.extension.customproductlist.description
             tt_content_defValues {
-                CType = list
-                list_type = pxaproductmanager_customproductlist
+                CType = pxaproductmanager_customproductlist
             }
         }
         plugins_tx_pxaproductmanager_productlist {
@@ -14,8 +13,7 @@ mod.wizards.newContentElement.wizardItems.plugins {
             title = LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:be.extension.productlist.name
             description = LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:be.extension.productlist.description
             tt_content_defValues {
-                CType = list
-                list_type = pxaproductmanager_productlist
+                CType = pxaproductmanager_productlist
             }
         }
         plugins_tx_pxaproductmanager_productrender {
@@ -23,8 +21,7 @@ mod.wizards.newContentElement.wizardItems.plugins {
             title = LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:be.extension.productrender.name
             description = LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:be.extension.productrender.description
             tt_content_defValues {
-                CType = list
-                list_type = pxaproductmanager_productrender
+                CType = pxaproductmanager_productrender
             }
         }
         plugins_tx_pxaproductmanager_productshow {
@@ -32,8 +29,7 @@ mod.wizards.newContentElement.wizardItems.plugins {
             title = LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:be.extension.productshow.name
             description = LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:be.extension.productshow.description
             tt_content_defValues {
-                CType = list
-                list_type = pxaproductmanager_productshow
+                CType = pxaproductmanager_productshow
             }
         }
     }

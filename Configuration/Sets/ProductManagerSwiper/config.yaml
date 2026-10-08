@@ -1,0 +1,4 @@
+name: pixelant/pxa-product-manager-swiper
+label: 'Products Manager: Add Swiper Js and Styles'
+dependencies:
+  - pixelant/pxa-product-manager

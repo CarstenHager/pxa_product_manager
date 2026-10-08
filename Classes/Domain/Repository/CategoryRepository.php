@@ -25,7 +25,6 @@ namespace Pixelant\PxaProductManager\Domain\Repository;
  *  This copyright notice MUST APPEAR in all copies of the script!
  */
 
-use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Persistence\Generic\Typo3QuerySettings;
@@ -44,17 +43,16 @@ class CategoryRepository extends Repository
      *
      * @var array
      */
-    protected $defaultOrderings = [
-        'sorting' => QueryInterface::ORDER_ASCENDING,
-    ];
+
 
     /**
      * Initializes the repository.
      */
     public function initializeObject(): void
     {
+        $this->setDefaultOrderings(['sorting' => QueryInterface::ORDER_ASCENDING]);
         /** @var Typo3QuerySettings $querySettings */
-        $querySettings = $this->objectManager->get(Typo3QuerySettings::class);
+        $querySettings = GeneralUtility::makeInstance(Typo3QuerySettings::class);
         $querySettings->setRespectStoragePage(false);
         $this->setDefaultQuerySettings($querySettings);
     }
@@ -84,18 +82,18 @@ class CategoryRepository extends Repository
                 )
             )
             ->where(
-                $queryBuilder->expr()->in('mm.uid_foreign', "(${subQuery})"),
+                $queryBuilder->expr()->in('mm.uid_foreign', $subQuery),
                 $queryBuilder->expr()->eq('mm.tablenames', $queryBuilder->createNamedParameter(
                     'tx_pxaproductmanager_domain_model_product',
-                    \PDO::PARAM_STR
+                    \Doctrine\DBAL\ParameterType::STRING
                 )),
                 $queryBuilder->expr()->eq('mm.fieldname', $queryBuilder->createNamedParameter(
                     'categories',
-                    Connection::PARAM_STR
+                    \Doctrine\DBAL\ParameterType::STRING
                 ))
             )
             ->groupBy('category.uid')
-            ->execute()
-            ->fetchAll(\PDO::FETCH_COLUMN);
+            ->executeQuery()
+            ->fetchFirstColumn();
     }
 }

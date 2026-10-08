@@ -12,7 +12,6 @@ use Pixelant\PxaProductManager\Service\Url\UrlBuilderService;
 use Pixelant\PxaProductManager\Service\Url\UrlBuilderServiceInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 
 /**
  * Create breadcrumbs array for UserFunc.
@@ -24,7 +23,7 @@ class Breadcrumbs
     /**
      * @var ServerRequestInterface
      */
-    protected ServerRequestInterface $request;
+    protected ?ServerRequestInterface $request = null;
 
     /**
      * @var ProductRepository
@@ -43,13 +42,14 @@ class Breadcrumbs
      * @param CategoryRepository $categoryRepository
      */
     public function __construct(
-        ProductRepository $productRepository = null,
-        CategoryRepository $categoryRepository = null
+        ?ProductRepository $productRepository = null,
+        ?CategoryRepository $categoryRepository = null
     ) {
-        $objectManager = GeneralUtility::makeInstance(ObjectManager::class);
-        $this->request = $GLOBALS['TYPO3_REQUEST'];
 
-        $this->productRepository = $productRepository ?? $objectManager->get(ProductRepository::class);
+        $request = $GLOBALS['TYPO3_REQUEST'] ?? null;
+        $this->request = $request instanceof ServerRequestInterface ? $request : null;
+
+        $this->productRepository = $productRepository ?? GeneralUtility::makeInstance(ProductRepository::class);
     }
 
     /**
@@ -117,8 +117,10 @@ class Breadcrumbs
      */
     protected function getArguments(): array
     {
-        if (!empty($this->namespace)) {
-            return $this->request->getQueryParams()[$this->namespace];
+        if (!empty($this->namespace) && $this->request !== null) {
+            $arguments = $this->request->getQueryParams()[$this->namespace] ?? [];
+
+            return is_array($arguments) ? $arguments : [];
         }
 
         return [];
@@ -131,6 +133,10 @@ class Breadcrumbs
      */
     protected function hasBreadcrumbs(): bool
     {
+        if ($this->request === null) {
+            return false;
+        }
+
         $queryParams = $this->request->getQueryParams();
 
         foreach (UrlBuilderService::NAMESPACES as $value) {

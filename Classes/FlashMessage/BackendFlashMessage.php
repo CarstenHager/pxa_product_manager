@@ -18,7 +18,7 @@ class BackendFlashMessage
      * @param int $level
      * @throws \TYPO3\CMS\Core\Exception
      */
-    public function flash(string $message, string $title, int $level = FlashMessage::INFO): void
+    public function flash(string $message, string $title, \TYPO3\CMS\Core\Type\ContextualFeedbackSeverity $level = \TYPO3\CMS\Core\Type\ContextualFeedbackSeverity::INFO): void
     {
         /** @var FlashMessage $flashMessage */
         $flashMessage = GeneralUtility::makeInstance(

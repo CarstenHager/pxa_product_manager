@@ -43,11 +43,6 @@ use TYPO3\CMS\Extbase\Persistence\Repository;
 abstract class AbstractDemandRepository extends Repository implements DemandRepositoryInterface
 {
     /**
-     * @var EventDispatcherInterface
-     */
-    protected $eventDispatcher;
-
-    /**
      * @var DemandService
      */
     protected DemandService $demandService;
@@ -89,12 +84,12 @@ abstract class AbstractDemandRepository extends Repository implements DemandRepo
      */
     public function findDemanded(DemandInterface $demand): array
     {
-        $result = $this->createDemandQueryBuilder($demand)->execute();
-        $dataMapper = $this->objectManager->get(DataMapper::class);
+        $result = $this->createDemandQueryBuilder($demand)->executeQuery();
+        $dataMapper = GeneralUtility::makeInstance(DataMapper::class);
 
         return $dataMapper->map(
             $this->getObjectClassName(),
-            $result->fetchAll()
+            $result->fetchAllAssociative()
         );
     }
 
@@ -115,7 +110,7 @@ abstract class AbstractDemandRepository extends Repository implements DemandRepo
                     'pid',
                     $queryBuilder->createNamedParameter(
                         $storage,
-                        \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY
+                        \Doctrine\DBAL\ArrayParameterType::INTEGER
                     )
                 )
             );

@@ -40,7 +40,7 @@ class SelectBoxMapper extends AbstractMapper
     public function mapToArray(string $attributeValueValue, int $attribute): array
     {
         $selectedOptions = array_filter(
-            AttributeUtility::findAttributeOptions($attribute),
+            AttributeUtility::findAttributeOptions($attribute) ?? [],
             function (array $option) use ($attributeValueValue) {
                 return GeneralUtility::inList($attributeValueValue, $option['uid']);
             }

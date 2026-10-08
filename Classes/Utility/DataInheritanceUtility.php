@@ -13,6 +13,7 @@ use Pixelant\PxaProductManager\Event\DataInheritance\InlineIdentifierFieldEvent;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use TYPO3\CMS\Backend\Form\FormDataCompiler;
 use TYPO3\CMS\Backend\Form\FormDataGroup\TcaDatabaseRecord;
+use TYPO3\CMS\Backend\Domain\Repository\Localization\LocalizationRepository;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Database\RelationHandler;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
@@ -20,7 +21,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
 use TYPO3\CMS\Core\Utility\StringUtility;
 use TYPO3\CMS\Extbase\Domain\Model\FileReference;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Persistence\ObjectStorage;
 
 /**
@@ -57,7 +57,7 @@ class DataInheritanceUtility
         );
 
         self::$productTypeInheritedFields[$productType]
-            = GeneralUtility::trimExplode(',', $productTypeRecord['inherit_fields'] . ',product_type', true);
+            = GeneralUtility::trimExplode(',', ($productTypeRecord['inherit_fields'] ?? '') . ',product_type', true);
 
         return self::$productTypeInheritedFields[$productType];
     }
@@ -78,11 +78,12 @@ class DataInheritanceUtility
             return self::$productTypeForProduct[$productId];
         }
 
-        self::$productTypeForProduct[$productId] = (int)BackendUtility::getRecord(
+        $productRecord = BackendUtility::getRecord(
             ProductRepository::TABLE_NAME,
             $productId,
             'product_type'
-        )['product_type'] ?? 0;
+        ) ?? [];
+        self::$productTypeForProduct[$productId] = (int)($productRecord['product_type'] ?? 0);
 
         return self::$productTypeForProduct[$productId];
     }
@@ -137,7 +138,10 @@ class DataInheritanceUtility
         int $mmUid,
         string $currentTable = ProductRepository::TABLE_NAME
     ): array {
-        $foreignTable = $fieldTcaConfiguration['foreign_table'];
+        $foreignTable = (string)($fieldTcaConfiguration['foreign_table'] ?? '');
+        if ($foreignTable === '' || $mmUid <= 0) {
+            return [];
+        }
 
         /** @var RelationHandler $relationHandler */
         $relationHandler = GeneralUtility::makeInstance(RelationHandler::class);
@@ -162,7 +166,7 @@ class DataInheritanceUtility
      */
     public static function calculateInheritanceHash(int $productId): string
     {
-        return md5(json_encode(self::buildInheritedFieldValuesArray($productId))) ?? '';
+        return md5((string)(json_encode(self::buildInheritedFieldValuesArray($productId)) ?: ''));
     }
 
     /**
@@ -197,7 +201,7 @@ class DataInheritanceUtility
                 $productInheritedFieldsRecord
             );
 
-            if ($fieldTcaConfiguration['type'] === 'inline') {
+            if (($fieldTcaConfiguration['type'] ?? '') === 'inline') {
                 $resolvedItemsList = self::resolveInlineInheritedFields(
                     $fieldTcaConfiguration,
                     $productId
@@ -205,7 +209,11 @@ class DataInheritanceUtility
 
                 if ($key === 'attributes_values') {
                     foreach ($resolvedItemsList as $attributeValue) {
-                        [$uid, $value] = GeneralUtility::trimExplode('|', $attributeValue);
+                        [$uid, $value] = array_pad(
+                            GeneralUtility::trimExplode('|', (string)$attributeValue),
+                            2,
+                            ''
+                        );
                         $attributeKey = 'attribute.' . $uid;
                         if (in_array($attributeKey, $inheritedFields, true)) {
                             $inheritedFieldValues[$attributeKey] = $value;
@@ -231,8 +239,7 @@ class DataInheritanceUtility
      */
     protected static function resolveInlineInheritedFields(array $fieldTcaConfiguration, int $productId): array
     {
-        $eventDispatcher = GeneralUtility::makeInstance(ObjectManager::class)
-            ->get(EventDispatcherInterface::class);
+        $eventDispatcher = GeneralUtility::makeInstance(EventDispatcherInterface::class);
 
         $resolvedItemsList = [];
 
@@ -243,11 +250,16 @@ class DataInheritanceUtility
 
         if (!empty($resolvedItems)) {
             foreach ($resolvedItems as $item) {
+                $table = (string)($item['table'] ?? '');
+                $uid = (int)($item['uid'] ?? 0);
+                if ($table === '' || $uid <= 0) {
+                    continue;
+                }
                 $resolvedItemsList[]
                     = $eventDispatcher->dispatch(
                         new CalculateInlineFieldValueEvent(
-                            $item['table'],
-                            $item['uid']
+                            $table,
+                            $uid
                         )
                     )->getValue();
             }
@@ -268,9 +280,9 @@ class DataInheritanceUtility
         $compiledProductRecord = self::compileRecordData(ProductRepository::TABLE_NAME, $productId);
 
         if ($onlyIncludeInheritedFields) {
-            $productType = (int)$compiledProductRecord['product_type'] ?? false;
+            $productType = (int)($compiledProductRecord['product_type'] ?? false);
             if (!$productType) {
-                self::getProductTypeForProduct((int)$compiledProductRecord['uid']);
+                $productType = self::getProductTypeForProduct($productId);
             }
             $inheritedDbFields = self::getInheritedDbFieldsForProductType($productType);
 
@@ -333,7 +345,7 @@ class DataInheritanceUtility
             ProductRepository::TABLE_NAME,
             $childProductId,
             '*'
-        );
+        ) ?? [];
 
         $fieldTcaConfiguration = TcaUtility::getTcaFieldConfigurationAndRespectColumnsOverrides(
             ProductRepository::TABLE_NAME,
@@ -351,7 +363,10 @@ class DataInheritanceUtility
             $parentProductId
         );
 
-        $foreignTable = $fieldTcaConfiguration['foreign_table'];
+        $foreignTable = (string)($fieldTcaConfiguration['foreign_table'] ?? '');
+        if ($foreignTable === '') {
+            return [];
+        }
 
         self::addIndentifiersToResolvedRelationItems($resolvedParentItemsList, $foreignTable);
 
@@ -366,13 +381,20 @@ class DataInheritanceUtility
         // create missing attributes, add to child resolved items array data.
         if (!empty($missingChildAttributeValues)) {
             foreach ($missingChildAttributeValues as $missingChildAttributeValue) {
-                $parentItemIndex = self::resolvedItemIndexByIdentifier(
-                    $resolvedParentItemsList,
-                    (string)$missingChildAttributeValue
-                );
-                $parentItem = $resolvedParentItemsList[$parentItemIndex];
-                $table = $parentItem['table'];
-                $id = $parentItem['uid'];
+                try {
+                    $parentItemIndex = self::resolvedItemIndexByIdentifier(
+                        $resolvedParentItemsList,
+                        (string)$missingChildAttributeValue
+                    );
+                } catch (\UnexpectedValueException) {
+                    continue;
+                }
+                $parentItem = $resolvedParentItemsList[$parentItemIndex] ?? [];
+                $table = (string)($parentItem['table'] ?? '');
+                $id = (int)($parentItem['uid'] ?? 0);
+                if ($table === '' || $id <= 0) {
+                    continue;
+                }
 
                 $compiledParentRecord = self::compileRecordData(
                     $table,
@@ -383,12 +405,12 @@ class DataInheritanceUtility
                 $resolvedChildItemsList[count($resolvedChildItemsList)] = [
                     'table' => $parentItem['table'],
                     'uid' => StringUtility::getUniqueId('NEW'),
-                    'identifier' => $parentItem['identifier'],
+                    'identifier' => (string)($parentItem['identifier'] ?? ''),
                     'parent_sorting' => $parentItemIndex,
                     'data' => [
-                        'value' => $compiledParentRecord['value'],
-                        'attribute' => $compiledParentRecord['attribute'],
-                        'pid' => $compiledParentRecord['pid'],
+                        'value' => $compiledParentRecord['value'] ?? '',
+                        'attribute' => $compiledParentRecord['attribute'] ?? 0,
+                        'pid' => $compiledParentRecord['pid'] ?? 0,
                     ],
                 ];
             }
@@ -398,24 +420,28 @@ class DataInheritanceUtility
 
         self::addSortingToResolvedChildAttributeRelations(
             $resolvedChildItemsList,
-            (int)$parentInheritanceData['product_type']
+            (int)($parentInheritanceData['product_type'] ?? 0)
         );
 
         $attributeTypes = self::listAttributeTypesOfInheritedAttributeValues($inheritedAttributes);
 
         foreach ($inheritedAttributes as $attribute) {
-            $inheritedAttributeId = (string)array_pop(explode('.', (string)$attribute ?? ''));
-            $childItemIndex = self::resolvedItemIndexByIdentifier($resolvedChildItemsList, $inheritedAttributeId);
+            $inheritedAttributeId = (string)array_slice(explode('.', (string)$attribute ?? ''), -1)[0];
+            try {
+                $childItemIndex = self::resolvedItemIndexByIdentifier($resolvedChildItemsList, $inheritedAttributeId);
+            } catch (\UnexpectedValueException) {
+                continue;
+            }
 
-            switch ($attributeTypes[$inheritedAttributeId]) {
+            switch ($attributeTypes[$inheritedAttributeId] ?? 0) {
                 case Attribute::ATTRIBUTE_TYPE_FILE:
                 case Attribute::ATTRIBUTE_TYPE_IMAGE:
                     // Needs to be fixed to inherit with inline relation.
-                    $resolvedChildItemsList[$childItemIndex]['data']['value'] = $parentInheritanceData[$attribute];
+                    $resolvedChildItemsList[$childItemIndex]['data']['value'] = $parentInheritanceData[$attribute] ?? '';
 
                     break;
                 default:
-                    $resolvedChildItemsList[$childItemIndex]['data']['value'] = $parentInheritanceData[$attribute];
+                    $resolvedChildItemsList[$childItemIndex]['data']['value'] = $parentInheritanceData[$attribute] ?? '';
 
                     break;
             }
@@ -423,7 +449,8 @@ class DataInheritanceUtility
 
         // Fix sorting like "parent".
         usort($resolvedChildItemsList, function ($a, $b) {
-            return $a['attribute_sorting'] > $b['attribute_sorting'];
+            return (int)($a['attribute_sorting'] ?? PHP_INT_MAX)
+                <=> (int)($b['attribute_sorting'] ?? PHP_INT_MAX);
         });
 
         // Add field to array.
@@ -456,7 +483,7 @@ class DataInheritanceUtility
         string $identifierField = 'identifier'
     ): int {
         foreach ($resolvedItems as $index => $resolvedItem) {
-            if ((string)$resolvedItem[$identifierField] === $identifier) {
+            if ((string)($resolvedItem[$identifierField] ?? '') === $identifier) {
                 return $index;
             }
         }
@@ -478,7 +505,7 @@ class DataInheritanceUtility
         $missingAttributes = [];
         $childAttributeIdList = array_column($resolvedChildItemsList, 'identifier');
         foreach ($inheritedAttributes as $attribute) {
-            $inheritedAttributeId = (string)array_pop(explode('.', (string)$attribute ?? ''));
+            $inheritedAttributeId = (string)array_slice(explode('.', (string)$attribute ?? ''), -1)[0];
             if (!in_array($inheritedAttributeId, $childAttributeIdList, true)) {
                 $missingAttributes[] = $inheritedAttributeId;
             }
@@ -499,12 +526,13 @@ class DataInheritanceUtility
     ): array {
         $attributes = [];
         foreach ($inheritedAttributes as $attribute) {
-            $attributeId = (int)array_pop(explode('.', (string)$attribute ?? ''));
-            $type = (int)BackendUtility::getRecord(
+            $attributeId = (int)array_slice(explode('.', (string)$attribute ?? ''), -1)[0];
+            $record = BackendUtility::getRecord(
                 AttributeRepository::TABLE_NAME,
                 $attributeId,
                 'type'
-            )['type'] ?? 0;
+            ) ?? [];
+            $type = (int)($record['type'] ?? 0);
             $attributes[$attributeId] = $type;
         }
 
@@ -539,7 +567,10 @@ class DataInheritanceUtility
             $parentProductId
         );
 
-        $foreignTable = $fieldTcaConfiguration['foreign_table'];
+        $foreignTable = (string)($fieldTcaConfiguration['foreign_table'] ?? '');
+        if ($foreignTable === '') {
+            return [];
+        }
 
         self::addIndentifiersToResolvedRelationItems($resolvedParentItemsList, $foreignTable);
 
@@ -559,7 +590,8 @@ class DataInheritanceUtility
 
         // Fix sorting like "parent".
         usort($resolvedChildItemsList, function ($a, $b) {
-            return $a['parent_sorting'] > $b['parent_sorting'];
+            return (int)($a['parent_sorting'] ?? PHP_INT_MAX)
+                <=> (int)($b['parent_sorting'] ?? PHP_INT_MAX);
         });
 
         // Add field to array.
@@ -568,9 +600,11 @@ class DataInheritanceUtility
 
         // Add missing relation records to array.
         foreach ($resolvedChildItemsList as $cResolvedItem) {
-            if (!MathUtility::canBeInterpretedAsInteger($cResolvedItem['uid'])) {
-                $computedInlineInheritanceData['data'][$cResolvedItem['table']][$cResolvedItem['uid']]
-                    = $cResolvedItem['data'];
+            $uid = (string)($cResolvedItem['uid'] ?? '');
+            $table = (string)($cResolvedItem['table'] ?? '');
+            if ($table !== '' && $uid !== '' && !MathUtility::canBeInterpretedAsInteger($uid)) {
+                $computedInlineInheritanceData['data'][$table][$uid]
+                    = $cResolvedItem['data'] ?? [];
             }
         }
 
@@ -587,19 +621,23 @@ class DataInheritanceUtility
         array &$resolvedRelationsItems,
         string $foreignTable
     ): void {
-        $eventDispatcher = GeneralUtility::makeInstance(ObjectManager::class)
-            ->get(EventDispatcherInterface::class);
+        $eventDispatcher = GeneralUtility::makeInstance(EventDispatcherInterface::class);
 
         $identifierField = $eventDispatcher
             ->dispatch(new InlineIdentifierFieldEvent($foreignTable))
             ->getField();
+        if ($identifierField === '') {
+            return;
+        }
 
         foreach ($resolvedRelationsItems as $index => $resolvedItem) {
-            $identifier = BackendUtility::getRecord(
-                $resolvedItem['table'],
-                $resolvedItem['uid'],
-                $identifierField
-            )[$identifierField] ?? [];
+            $table = (string)($resolvedItem['table'] ?? '');
+            $uid = (int)($resolvedItem['uid'] ?? 0);
+            if ($table === '' || $uid <= 0) {
+                continue;
+            }
+            $record = BackendUtility::getRecord($table, $uid, $identifierField) ?? [];
+            $identifier = $record[$identifierField] ?? '';
 
             if (!empty($identifier)) {
                 $resolvedRelationsItems[$index]['identifier'] = (string)$identifier;
@@ -620,7 +658,9 @@ class DataInheritanceUtility
     ): void {
         foreach ($resolvedParentItemsList as $pIndex => $pResolvedItem) {
             foreach ($resolvedChildItemsList as $cIndex => $cResolvedItem) {
-                if ($cResolvedItem['identifier'] === $pResolvedItem['identifier']) {
+                if ((string)($cResolvedItem['identifier'] ?? '') !== ''
+                    && (string)($cResolvedItem['identifier'] ?? '') === (string)($pResolvedItem['identifier'] ?? '')
+                ) {
                     $resolvedChildItemsList[$cIndex]['parent_sorting'] = $pIndex;
                 }
             }
@@ -648,7 +688,7 @@ class DataInheritanceUtility
             try {
                 $attributeSorting = self::resolvedItemIndexByIdentifier(
                     $attributesForProductType,
-                    (string)$cResolvedItem['identifier'],
+                    (string)($cResolvedItem['identifier'] ?? ''),
                     'uid'
                 );
             } catch (\Throwable $th) {
@@ -671,7 +711,7 @@ class DataInheritanceUtility
         array $resolvedChildItemsList
     ): bool {
         foreach ($resolvedChildItemsList as $resolvedChildItem) {
-            if ((string)$resolvedChildItem['identifier'] === $identifier) {
+            if ((string)($resolvedChildItem['identifier'] ?? '') === $identifier) {
                 return true;
             }
         }
@@ -690,29 +730,34 @@ class DataInheritanceUtility
         array &$resolvedChildItemsList,
         array $resolvedParentItemsList
     ): void {
-        $eventDispatcher = GeneralUtility::makeInstance(ObjectManager::class)
-            ->get(EventDispatcherInterface::class);
+        $eventDispatcher = GeneralUtility::makeInstance(EventDispatcherInterface::class);
 
         foreach ($resolvedParentItemsList as $pIndex => $pResolvedItem) {
+            $identifier = (string)($pResolvedItem['identifier'] ?? '');
+            $table = (string)($pResolvedItem['table'] ?? '');
+            $uid = (int)($pResolvedItem['uid'] ?? 0);
+            if ($identifier === '' || $table === '' || $uid <= 0) {
+                continue;
+            }
             $childHasRelation = self::childRelationHaveItemWithIdentifier(
-                (string)$pResolvedItem['identifier'],
+                $identifier,
                 $resolvedChildItemsList
             );
             if (!$childHasRelation) {
                 $data = $eventDispatcher
                     ->dispatch(
                         new InheritNewInlineDataEvent(
-                            $pResolvedItem['table'],
-                            $pResolvedItem['uid'],
-                            (int)$pResolvedItem['identifier']
+                            $table,
+                            $uid,
+                            (int)$identifier
                         )
                     )
                     ->getData();
 
                 $resolvedChildItemsList[count($resolvedChildItemsList)] = [
-                    'table' => $pResolvedItem['table'],
+                    'table' => $table,
                     'uid' => StringUtility::getUniqueId('NEW'),
-                    'identifier' => $pResolvedItem['identifier'],
+                    'identifier' => $identifier,
                     'parent_sorting' => $pIndex,
                     'data' => $data,
                 ];
@@ -733,7 +778,11 @@ class DataInheritanceUtility
     ): void {
         foreach ($resolvedChildItemsList as $cIndex => $cResolvedItem) {
             if (!isset($cResolvedItem['parent_sorting'])) {
-                $removedRelations[$cResolvedItem['table']][$cResolvedItem['uid']]['delete'] = 1;
+                $table = (string)($cResolvedItem['table'] ?? '');
+                $uid = (string)($cResolvedItem['uid'] ?? '');
+                if ($table !== '' && $uid !== '') {
+                    $removedRelations[$table][$uid]['delete'] = 1;
+                }
                 unset($resolvedChildItemsList[$cIndex]);
             }
         }
@@ -760,14 +809,15 @@ class DataInheritanceUtility
         $inheritedAttributes = [];
 
         foreach (array_keys($parentInheritanceData) as $inheritField) {
-            if ($parentInheritanceData[$inheritField] !== $childInheritanceData[$inheritField]) {
+            $parentValue = $parentInheritanceData[$inheritField] ?? null;
+            if ($parentValue !== ($childInheritanceData[$inheritField] ?? null)) {
                 $fieldTcaConfiguration = TcaUtility::getTcaFieldConfigurationAndRespectColumnsOverrides(
                     ProductRepository::TABLE_NAME,
                     $inheritField,
                     $childInheritanceData
                 );
 
-                if ($fieldTcaConfiguration['type'] === 'inline') {
+                if (($fieldTcaConfiguration['type'] ?? '') === 'inline') {
                     $computedInheritanceData = self::computeInlineInheritanceData(
                         $inheritField,
                         $fieldTcaConfiguration,
@@ -782,7 +832,7 @@ class DataInheritanceUtility
                         $inheritedAttributes[] = $inheritField;
                     } else {
                         $inheritanceData['data'][ProductRepository::TABLE_NAME][$productId][$inheritField]
-                            = $parentInheritanceData[$inheritField];
+                            = $parentValue;
                     }
                 }
             }
@@ -818,21 +868,25 @@ class DataInheritanceUtility
     public static function compileRecordData(string $tableName, int $vanillaUid, bool $removeUnprocessedColumns = false)
     {
         $formDataGroup = GeneralUtility::makeInstance(TcaDatabaseRecord::class);
-        $formDataCompiler = GeneralUtility::makeInstance(FormDataCompiler::class, $formDataGroup);
+        $formDataCompiler = GeneralUtility::makeInstance(FormDataCompiler::class);
 
         $formDataCompilerInput = [
             'tableName' => $tableName,
             'vanillaUid' => $vanillaUid,
             'command' => 'edit',
+            // Inheritance also runs in CLI without a backend route or return URL.
+            'returnUrl' => '',
+            'request' => $GLOBALS['TYPO3_REQUEST'] ?? new \TYPO3\CMS\Core\Http\ServerRequest(),
         ];
 
-        $result = $formDataCompiler->compile($formDataCompilerInput);
-        $row = $result['databaseRow'];
+        $result = $formDataCompiler->compile($formDataCompilerInput, $formDataGroup);
+        $row = (array)($result['databaseRow'] ?? []);
 
         if ($removeUnprocessedColumns) {
+            $columnsToProcess = (array)($result['columnsToProcess'] ?? []);
             $row = array_filter(
                 $row,
-                fn ($key) => in_array($key, $result['columnsToProcess'], true),
+                fn ($key) => in_array($key, $columnsToProcess, true),
                 ARRAY_FILTER_USE_KEY
             );
         }
@@ -843,7 +897,11 @@ class DataInheritanceUtility
 
                 foreach ($value as $item) {
                     if (is_array($item)) {
-                        $relations[] = $item['table'] . '_' . $item['uid'];
+                        $table = (string)($item['table'] ?? '');
+                        $uid = (string)($item['uid'] ?? '');
+                        if ($table !== '' && $uid !== '') {
+                            $relations[] = $table . '_' . $uid;
+                        }
                     } else {
                         $relations[] = $item;
                     }
@@ -864,7 +922,7 @@ class DataInheritanceUtility
      */
     public static function getParentProductIdWithOverlay(int $productId): int
     {
-        $languageField = $GLOBALS['TCA'][ProductRepository::TABLE_NAME]['ctrl']['languageField'];
+        $languageField = (string)($GLOBALS['TCA'][ProductRepository::TABLE_NAME]['ctrl']['languageField'] ?? 'sys_language_uid');
 
         $childRecord = BackendUtility::getRecord(
             ProductRepository::TABLE_NAME,
@@ -874,19 +932,20 @@ class DataInheritanceUtility
 
         // If child record is localized, fetch l10n_parent, use default record.
         if (!empty($childRecord['parent'])) {
-            $parent = (int)array_pop(explode('_', (string)$childRecord['parent'] ?? ''));
+            $parent = (int)array_slice(explode('_', (string)($childRecord['parent'] ?? '')), -1)[0];
 
             if (!empty($parent)) {
                 // If child product is localized, fetch localized product of parent.
-                if ((int)$childRecord[$languageField] > 0) {
-                    $localizedParentRecord = BackendUtility::getRecordLocalization(
-                        ProductRepository::TABLE_NAME,
-                        $parent,
-                        $childRecord[$languageField]
-                    )[0] ?? [];
+                if ((int)($childRecord[$languageField] ?? 0) > 0) {
+                    $localizedParentRecord = GeneralUtility::makeInstance(LocalizationRepository::class)
+                        ->getRecordTranslation(
+                            ProductRepository::TABLE_NAME,
+                            $parent,
+                            (int)($childRecord[$languageField] ?? 0)
+                        );
 
-                    if (!empty($localizedParentRecord)) {
-                        return (int)$localizedParentRecord['uid'];
+                    if ($localizedParentRecord !== null) {
+                        return $localizedParentRecord->getUid();
                     }
                 } else {
                     return (int)$parent;
@@ -905,15 +964,16 @@ class DataInheritanceUtility
      */
     public static function getParentProductIdOfLocalizedProduct(int $identifier): int
     {
-        $translationSource = $GLOBALS['TCA'][ProductRepository::TABLE_NAME]['ctrl']['transOrigPointerField'];
+        $translationSource = (string)($GLOBALS['TCA'][ProductRepository::TABLE_NAME]['ctrl']['transOrigPointerField'] ?? 'l10n_parent');
 
-        $l10nParent = (int)BackendUtility::getRecord(
+        $localizedRecord = BackendUtility::getRecord(
             ProductRepository::TABLE_NAME,
             $identifier,
             $translationSource
-        )[$translationSource] ?? 0;
+        ) ?? [];
+        $l10nParent = (int)($localizedRecord[$translationSource] ?? 0);
 
-        return (int)array_pop(explode('_', (string)$l10nParent ?? 0));
+        return (int)array_slice(explode('_', (string)$l10nParent), -1)[0];
     }
 
     /**
@@ -924,12 +984,13 @@ class DataInheritanceUtility
      */
     public static function getProductLanguage(int $identifier): int
     {
-        $languageField = $GLOBALS['TCA'][ProductRepository::TABLE_NAME]['ctrl']['languageField'];
-        $language = (int)BackendUtility::getRecord(
+        $languageField = (string)($GLOBALS['TCA'][ProductRepository::TABLE_NAME]['ctrl']['languageField'] ?? 'sys_language_uid');
+        $productRecord = BackendUtility::getRecord(
             ProductRepository::TABLE_NAME,
             $identifier,
             $languageField
-        )[$languageField] ?? 0;
+        ) ?? [];
+        $language = (int)($productRecord[$languageField] ?? 0);
 
         return $language;
     }

@@ -15,8 +15,7 @@ class DateTimeProvider extends InputProvider
     protected function overrideWithSpecificTca(array $tca): array
     {
         if ($this->isRequired()) {
-            $tca['config']['eval']
-                = $tca['config']['eval'] ? $tca['config']['eval'] . ',required' : 'required';
+            $tca['config']['required'] = true;
         }
 
         return $tca;

@@ -8,15 +8,10 @@ use Pixelant\PxaProductManager\Domain\Resource\ResourceInterface;
 use Pixelant\PxaProductManager\Service\Resource\ResourceConverter;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
-use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
-use TYPO3Fluid\Fluid\Core\ViewHelper\Traits\CompileWithRenderStatic;
 
 class ResourceEncodeViewHelper extends AbstractViewHelper
 {
-    use CompileWithRenderStatic;
-
     /**
      * @var ResourceConverter
      */
@@ -32,23 +27,20 @@ class ResourceEncodeViewHelper extends AbstractViewHelper
     }
 
     /**
-     * @param array $arguments
-     * @param \Closure $renderChildrenClosure
-     * @param RenderingContextInterface $renderingContext
-     * @return mixed
+     * Encode the resource representation as JSON.
      */
-    public static function renderStatic(
-        array $arguments,
-        \Closure $renderChildrenClosure,
-        RenderingContextInterface $renderingContext
-    ): string {
+    public function render(): string
+    {
         /** @var AbstractEntity $entity */
-        $entity = $arguments['entity'] ?? $renderChildrenClosure();
+        $entity = $this->arguments['entity'] ?? $this->renderChildren();
+        if (!$entity instanceof AbstractEntity) {
+            return '{}';
+        }
 
         /** @var ResourceInterface $resource */
-        $resourceArray = static::getConverter()->convert($entity, $arguments['resource']);
+        $resourceArray = static::getConverter()->convert($entity, $this->arguments['resource'] ?? null);
 
-        return json_encode($resourceArray);
+        return (string)json_encode($resourceArray);
     }
 
     /**
@@ -57,7 +49,7 @@ class ResourceEncodeViewHelper extends AbstractViewHelper
     protected static function getConverter(): ResourceConverter
     {
         if (static::$converter === null) {
-            static::$converter = GeneralUtility::makeInstance(ObjectManager::class)->get(ResourceConverter::class);
+            static::$converter = GeneralUtility::makeInstance(ResourceConverter::class);
         }
 
         return self::$converter;

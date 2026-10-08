@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pixelant\PxaProductManager\Tests\Unit\Service;
+namespace Pixelant\PxaProductManager\Tests\Unit\Service\Resource;
 
 use Nimut\TestingFramework\TestCase\UnitTestCase;
 use Pixelant\PxaProductManager\Domain\Model\Product;

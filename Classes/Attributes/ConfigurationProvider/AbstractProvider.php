@@ -79,21 +79,19 @@ abstract class AbstractProvider implements ProviderInterface
             'exclude' => false,
             'label' => '',
             'config' => [
-                'type' => 'input',
+                'type' => 'datetime',
+                'format' => 'datetime',
                 'default' => 0,
-                'renderType' => 'inputDateTime',
-                'eval' => 'datetime,int',
             ],
         ],
 
         Attribute::ATTRIBUTE_TYPE_LINK => [
             'exclude' => false,
+            'label' => '',
             'config' => [
-                'type' => 'input',
+                'type' => 'link',
                 'size' => '30',
                 'max' => '256',
-                'eval' => 'trim',
-                'renderType' => 'inputLink',
                 'softref' => 'typolink',
             ],
         ],
@@ -136,10 +134,12 @@ abstract class AbstractProvider implements ProviderInterface
      */
     protected function getAttributeConfiguration(): array
     {
-        $configuration = $this->tca[$this->attribute['type']];
-        $configuration['label'] = $this->attribute['name'];
+        $configuration = $this->tca[$this->attribute['type'] ?? Attribute::ATTRIBUTE_TYPE_INPUT]
+            ?? $this->tca[Attribute::ATTRIBUTE_TYPE_INPUT];
+        $configuration['label'] = (string)($this->attribute['name'] ?? 'Value');
 
         if (isset($this->attribute['default_value'])) {
+            $configuration['config'] ??= [];
             $configuration['config']['default'] = $this->attribute['default_value'];
         }
 
@@ -153,7 +153,7 @@ abstract class AbstractProvider implements ProviderInterface
      */
     protected function isRequired(): bool
     {
-        return (bool)$this->attribute['required'];
+        return (bool)($this->attribute['required'] ?? false);
     }
 
     /**

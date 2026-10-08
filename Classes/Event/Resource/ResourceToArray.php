@@ -17,7 +17,7 @@ class ResourceToArray
     /**
      * @param array $data
      */
-    public function __construct(array $data)
+    public function __construct(array $data, private ?\TYPO3\CMS\Extbase\DomainObject\AbstractEntity $entity = null)
     {
         $this->data = $data;
     }
@@ -25,6 +25,11 @@ class ResourceToArray
     /**
      * @return array
      */
+    public function getEntity(): ?\TYPO3\CMS\Extbase\DomainObject\AbstractEntity
+    {
+        return $this->entity;
+    }
+
     public function getData(): array
     {
         return $this->data;

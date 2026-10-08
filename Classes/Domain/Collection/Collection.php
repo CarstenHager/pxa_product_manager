@@ -64,7 +64,7 @@ class Collection implements Arrayable
      * @param callable $callback Callback for keys
      * @return Collection
      */
-    public function mapWithKeysOfProperty(string $property, callable $callback = null): self
+    public function mapWithKeysOfProperty(string $property, ?callable $callback = null): self
     {
         $keys = $this->pluck($property)->toArray();
 
@@ -82,7 +82,7 @@ class Collection implements Arrayable
      * @param callable|null $callback
      * @return Collection
      */
-    public function pluck(string $property, callable $callback = null): self
+    public function pluck(string $property, ?callable $callback = null): self
     {
         $keys = array_map(fn ($item) => ObjectAccess::getProperty($item, $property), $this->collection);
 
@@ -153,7 +153,7 @@ class Collection implements Arrayable
      * @param callable|null $callback Callback that will be applied to property value
      * @return Collection
      */
-    public function searchByProperty(string $property, $value, callable $callback = null): self
+    public function searchByProperty(string $property, $value, ?callable $callback = null): self
     {
         $matchItems = [];
         foreach ($this->collection as $item) {
@@ -177,7 +177,7 @@ class Collection implements Arrayable
      * @param callable|null $callback
      * @return  mixed Item if found, otherwise null
      */
-    public function searchOneByProperty(string $property, $value, callable $callback = null)
+    public function searchOneByProperty(string $property, $value, ?callable $callback = null)
     {
         return $this->searchByProperty($property, $value, $callback)->first();
     }

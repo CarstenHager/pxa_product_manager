@@ -77,7 +77,7 @@ class Product extends AbstractResource
      * @param array|null $additional
      * @return array
      */
-    public function extractProperties(array $additional = null): array
+    public function extractProperties(?array $additional = null): array
     {
         $this->settings = $this->getPluginSettings();
 
@@ -116,10 +116,10 @@ class Product extends AbstractResource
     {
         $additionalAttributesList = GeneralUtility::trimExplode(',', $additionalAttributes, true);
         $includeEmptyAdditionalAttributes
-            = (bool)$this->settings['listView']['includeEmptyAdditionalAttributes'] ?? false;
+            = (bool)($this->settings['listView']['includeEmptyAdditionalAttributes'] ?? false);
 
         foreach ($additionalAttributesList as $attributeIdentifier) {
-            $attributeValue = $this->entity->getAttributeValue()[$attributeIdentifier];
+            $attributeValue = $this->entity->getAttributeValue()[$attributeIdentifier] ?? null;
             if (!empty($attributeValue)) {
                 $label = $attributeValue->getAttribute()->getLabel() ?? $attributeValue->getAttribute()->getName();
                 $resource[$attributeIdentifier] = [
@@ -163,7 +163,8 @@ class Product extends AbstractResource
             return null;
         }
 
-        $processingInstructions = $this->settings['listView']['images'];
+        $processingInstructions = $this->settings['listView']['images'] ?? [];
+        $processingInstructions = is_array($processingInstructions) ? $processingInstructions : [];
 
         $processedImage = $this->imageService->applyProcessingInstructions(
             $reference->getOriginalResource(),

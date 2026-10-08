@@ -7,12 +7,9 @@ namespace Pixelant\PxaProductManager\ViewHelpers;
 use Pixelant\PxaProductManager\Domain\Model\Product;
 use Pixelant\PxaProductManager\Service\Url\UrlBuilderServiceInterface;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
-use TYPO3Fluid\Fluid\Core\ViewHelper\Traits\CompileWithRenderStatic;
 
 class UriViewHelper extends AbstractViewHelper
 {
-    use CompileWithRenderStatic;
-
     /**
      * @var UrlBuilderServiceInterface
      */
@@ -40,14 +37,14 @@ class UriViewHelper extends AbstractViewHelper
      *
      * @return string
      */
-    public function render()
+    public function render(): string
     {
         $url = '';
 
         /** @var Product $product */
-        $product = $this->arguments['product'];
+        $product = $this->arguments['product'] ?? null;
         /** @var bool $absolute */
-        $absolute = $arguments['absolute'] ?? false;
+        $absolute = $this->arguments['absolute'] ?? false;
 
         if ($product !== null) {
             $this->urlBuilder->absolute($absolute);

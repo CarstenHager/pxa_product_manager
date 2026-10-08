@@ -14,10 +14,10 @@ use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\Exception\MissingArrayPathException;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
-use TYPO3\CMS\Extbase\Mvc\View\ViewInterface;
+use TYPO3\CMS\Core\View\ViewInterface;
 use TYPO3\CMS\Extbase\Persistence\Repository;
-use TYPO3\CMS\Extbase\SignalSlot\Dispatcher;
 use TYPO3\CMS\Extbase\Utility\LocalizationUtility;
+use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 
 abstract class AbstractController extends ActionController
 {
@@ -36,32 +36,22 @@ abstract class AbstractController extends ActionController
         $this->siteSettings = $settingsReader;
     }
 
-    /**
-     * @var Dispatcher
-     */
-    protected Dispatcher $dispatcher;
 
     /**
      * Override plugin settings with site settings, before resolving view.
      * @return ViewInterface
      */
-    protected function resolveView()
+    protected function resolveView(): ViewInterface
     {
         $singleViewPid = $this->siteSettings->getValue('singleViewPid');
         if ($singleViewPid) {
+            $this->settings['pids'] ??= [];
             $this->settings['pids']['singleViewPid'] = $singleViewPid;
         }
 
         return parent::resolveView();
     }
 
-    /**
-     * @param Dispatcher $dispatcher
-     */
-    public function injectDispatcher(Dispatcher $dispatcher): void
-    {
-        $this->dispatcher = $dispatcher;
-    }
 
     /**
      * Find records using repository by uids list.
@@ -112,7 +102,7 @@ abstract class AbstractController extends ActionController
             $demand->setOrderDirection($settings['orderDirection']);
         }
 
-        $this->dispatcher->dispatch(__CLASS__, 'AfterDemandCreationBeforeReturn', [$demand, $settings]);
+        $this->eventDispatcher->dispatch(new \Pixelant\PxaProductManager\Event\Controller\AfterDemandCreationEvent($demand, $settings));
 
         return $demand;
     }
@@ -128,7 +118,7 @@ abstract class AbstractController extends ActionController
         array $settings,
         string $className = CategoryDemand::class
     ): DemandInterface {
-        $settings = array_merge($settings, $this->settings['categoriesOrderings'] ?? []);
+        $settings = array_merge($settings, (array)($this->settings['categoriesOrderings'] ?? []));
         $className = $this->readFromSettings('demand.objects.categoryDemand', $className);
 
         $demand = $this->createDemandFromSettings($settings, $className);
@@ -156,7 +146,7 @@ abstract class AbstractController extends ActionController
         array $settings,
         string $className = ProductDemand::class
     ): DemandInterface {
-        $settings = array_merge($settings, $this->settings['productOrderings'] ?? []);
+        $settings = array_merge($settings, (array)($this->settings['productOrderings'] ?? []));
         $className = $this->readFromSettings('demand.objects.productDemand', $className);
 
         $demand = $this->createDemandFromSettings($settings, $className);
@@ -167,7 +157,7 @@ abstract class AbstractController extends ActionController
             $demand->setCategoryConjunction($settings['categoryConjunction']);
         }
         $demand->setPageTreeStartingPoint(
-            (int)$settings['pageTreeStartingPoint'] ?? $this->getTypoScriptFrontendController()->id
+            (int)($settings['pageTreeStartingPoint'] ?? $this->getCurrentPageId())
         );
 
         return $demand;
@@ -181,10 +171,18 @@ abstract class AbstractController extends ActionController
     protected function createOrderByArray()
     {
         $orderBy = [];
-        $listOrderBy = $this->settings['listView']['orderBy'];
+        $listOrderBy = $this->settings['listView']['orderBy'] ?? [];
+        if (!is_array($listOrderBy)) {
+            return [];
+        }
 
         foreach ($listOrderBy as $listOrderByItem) {
-            $text = LocalizationUtility::translate($listOrderByItem['key'], 'PxaProductManager');
+            if (!is_array($listOrderByItem) || !is_string($listOrderByItem['value'] ?? null)) {
+                continue;
+            }
+            $key = (string)($listOrderByItem['key'] ?? '');
+            $text = $key !== '' ? LocalizationUtility::translate($key, 'PxaProductManager') : null;
+            $text ??= $listOrderByItem['value'];
             $orderBy[] = [
                 'value' => $listOrderByItem['value'],
                 'text' => $text,
@@ -192,6 +190,18 @@ abstract class AbstractController extends ActionController
         }
 
         return $orderBy;
+    }
+
+    /** Default pagination also applies to content elements without a FlexForm. */
+    protected function getListLimit(): int
+    {
+        return max(0, (int)($this->settings['limit'] ?? $this->settings['listView']['limit'] ?? 12));
+    }
+
+    protected function getProductOrderings(): array
+    {
+        $orderings = $this->settings['productOrderings'] ?? [];
+        return (is_array($orderings) ? $orderings : []) + ['orderBy' => 'name', 'orderDirection' => 'asc'];
     }
 
     /**
@@ -213,13 +223,36 @@ abstract class AbstractController extends ActionController
     }
 
     /**
-     * Get Typoscript frontend controller.
+     * Return the current frontend page ID.
      *
-     * @return TypoScriptFrontendController
+     * TYPO3 13 provides page information through the PSR-7 request. The
+     * fallback keeps this controller usable on TYPO3 12 during the transition.
      */
-    protected function getTypoScriptFrontendController()
+    protected function getCurrentPageId(): int
     {
-        return $GLOBALS['TSFE'];
+        $request = isset($this->request) ? $this->request : null;
+        $pageInformation = $request?->getAttribute('frontend.page.information');
+        if (is_object($pageInformation) && method_exists($pageInformation, 'getId')) {
+            return (int)$pageInformation->getId();
+        }
+
+        return 0;
+    }
+
+    /**
+     * Return the current frontend root line.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function getCurrentRootLine(): array
+    {
+        $request = isset($this->request) ? $this->request : null;
+        $pageInformation = $request?->getAttribute('frontend.page.information');
+        if (is_object($pageInformation) && method_exists($pageInformation, 'getRootLine')) {
+            return (array)$pageInformation->getRootLine();
+        }
+
+        return [];
     }
 
     /**
@@ -229,7 +262,7 @@ abstract class AbstractController extends ActionController
      */
     protected function getMenuLevels(): int
     {
-        return (int)$this->settings['menuLevels'] ?? 0;
+        return (int)($this->settings['menuLevels'] ?? 0);
     }
 
     /**
@@ -239,7 +272,27 @@ abstract class AbstractController extends ActionController
      */
     protected function getListViewMenuLevels(): int
     {
-        return (int)$this->settings['listView']['menuLevels'] ?? 0;
+        return (int)($this->settings['listView']['menuLevels'] ?? 0);
+    }
+
+    /**
+     * Return the content object from the PSR-7 request.
+     *
+     * ConfigurationManager->getContentObject() was deprecated in TYPO3 12
+     * and removed in TYPO3 13. The current content object is provided as a
+     * request attribute by the frontend rendering pipeline.
+     */
+    protected function getCurrentContentObject(): ContentObjectRenderer
+    {
+        $contentObject = $this->request->getAttribute('currentContentObject');
+        if (!$contentObject instanceof ContentObjectRenderer) {
+            throw new \RuntimeException(
+                'The current content object is not available in the frontend request.',
+                1728371301
+            );
+        }
+
+        return $contentObject;
     }
 
     /**
@@ -258,10 +311,10 @@ abstract class AbstractController extends ActionController
         $data = [];
 
         if ((int)$levels > 0) {
-            $currentPageId = $this->getTypoScriptFrontendController()->id;
-            $rootLine = $this->getTypoScriptFrontendController()->rootLine;
+            $currentPageId = $this->getCurrentPageId();
+            $rootLine = $this->getCurrentRootLine();
 
-            $fixedMenuPageId = (int)$this->settings['listView']['menuPageId'] ?? 0;
+            $fixedMenuPageId = (int)($this->settings['listView']['menuPageId'] ?? 0);
             if ($fixedMenuPageId > 0) {
                 $currentPageId = $fixedMenuPageId;
             }
@@ -305,7 +358,7 @@ abstract class AbstractController extends ActionController
         $excludeUidList = $event->getExcludeUidList();
 
         return $menuDirectoryProcessor->process(
-            $this->configurationManager->getContentObject(),
+            $this->getCurrentContentObject(),
             [],
             [
                 'special' => 'directory',
@@ -331,7 +384,7 @@ abstract class AbstractController extends ActionController
         );
 
         return $menuListProcessor->process(
-            $this->configurationManager->getContentObject(),
+            $this->getCurrentContentObject(),
             [],
             [
                 'special' => 'list',

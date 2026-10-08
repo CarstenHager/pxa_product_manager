@@ -32,8 +32,8 @@ class FalProvider implements ProviderInterface
      */
     public function get(): array
     {
-        if ($this->attribute['type'] === Attribute::ATTRIBUTE_TYPE_IMAGE) {
-            $allowedFileTypes = $GLOBALS['TYPO3_CONF_VARS']['GFX']['imagefile_ext'];
+        if (($this->attribute['type'] ?? '') === Attribute::ATTRIBUTE_TYPE_IMAGE) {
+            $allowedFileTypes = (string)($GLOBALS['TYPO3_CONF_VARS']['GFX']['imagefile_ext'] ?? '');
             $label = 'LLL:EXT:frontend/Resources/Private/Language/locallang_ttc.xlf:images.addFileReference';
         } else {
             $allowedFileTypes = '';
@@ -45,7 +45,7 @@ class FalProvider implements ProviderInterface
             $allowedFileTypes
         );
 
-        $configuration['label'] = $this->attribute['name'];
+        $configuration['label'] = (string)($this->attribute['name'] ?? 'Value');
 
         return $configuration;
     }
@@ -67,7 +67,7 @@ class FalProvider implements ProviderInterface
             'exclude' => false,
             'label' => '',
             // @codingStandardsIgnoreStart
-            'config' => ExtensionManagementUtility::getFileFieldTCAConfig(
+            'config' => \Pixelant\PxaProductManager\Utility\TcaFileFieldConfiguration::get(
                 'value',
                 [
                     'appearance' => [
@@ -81,7 +81,6 @@ class FalProvider implements ProviderInterface
                     'foreign_match_fields' => [
                         'fieldname' => 'value',
                         'tablenames' => 'tx_pxaproductmanager_domain_model_attributevalue',
-                        'table_local' => 'sys_file',
                     ],
                     'behaviour' => [
                         'allowLanguageSynchronization' => true,
@@ -95,39 +94,39 @@ class FalProvider implements ProviderInterface
                             ],
                         ],*/
                         'types' => [
-                            \TYPO3\CMS\Core\Resource\File::FILETYPE_UNKNOWN => [
+                            \TYPO3\CMS\Core\Resource\FileType::UNKNOWN->value => [
                                 'showitem' => '
-                            --palette--;LLL:EXT:lang/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerAttributePalette,
+                            --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerAttributePalette,
                             --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.basicoverlayPalette;basicoverlayPalette,
                             --palette--;;filePalette',
                             ],
-                            \TYPO3\CMS\Core\Resource\File::FILETYPE_TEXT => [
+                            \TYPO3\CMS\Core\Resource\FileType::TEXT->value => [
                                 'showitem' => '
-                            --palette--;LLL:EXT:lang/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerAttributePalette,
+                            --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerAttributePalette,
                             --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.basicoverlayPalette;basicoverlayPalette,
                             --palette--;;filePalette',
                             ],
-                            \TYPO3\CMS\Core\Resource\File::FILETYPE_IMAGE => [
+                            \TYPO3\CMS\Core\Resource\FileType::IMAGE->value => [
                                 'showitem' => '
-                            --palette--;LLL:EXT:lang/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerAttributePalette,
+                            --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerAttributePalette,
                             --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;imageoverlayPalette,
                             --palette--;;filePalette',
                             ],
-                            \TYPO3\CMS\Core\Resource\File::FILETYPE_AUDIO => [
+                            \TYPO3\CMS\Core\Resource\FileType::AUDIO->value => [
                                 'showitem' => '
-                            --palette--;LLL:EXT:lang/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerAttributePalette,
+                            --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerAttributePalette,
                             --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.audioOverlayPalette;audioOverlayPalette,
                             --palette--;;filePalette',
                             ],
-                            \TYPO3\CMS\Core\Resource\File::FILETYPE_VIDEO => [
+                            \TYPO3\CMS\Core\Resource\FileType::VIDEO->value => [
                                 'showitem' => '
-                            --palette--;LLL:EXT:lang/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerAttributePalette,
+                            --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerAttributePalette,
                             --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.videoOverlayPalette;videoOverlayPalette,
                             --palette--;;filePalette',
                             ],
-                            \TYPO3\CMS\Core\Resource\File::FILETYPE_APPLICATION => [
+                            \TYPO3\CMS\Core\Resource\FileType::APPLICATION->value => [
                                 'showitem' => '
-                            --palette--;LLL:EXT:lang/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerAttributePalette,
+                            --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerAttributePalette,
                             --palette--;LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file_reference.basicoverlayPalette;basicoverlayPalette,
                             --palette--;;filePalette',
                             ],

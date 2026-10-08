@@ -26,6 +26,8 @@ namespace Pixelant\PxaProductManager\Domain\Model;
  */
 
 use Pixelant\PxaProductManager\Domain\Collection\CanCreateCollection;
+use TYPO3\CMS\Extbase\Attribute\ORM\Cascade;
+use TYPO3\CMS\Extbase\Attribute\ORM\Lazy;
 use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
 use TYPO3\CMS\Extbase\Persistence\ObjectStorage;
 
@@ -76,10 +78,10 @@ class Attribute extends AbstractEntity
     protected string $identifier = '';
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Cascade("remove")
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\Pixelant\PxaProductManager\Domain\Model\Option>
      */
+    #[Lazy]
+    #[Cascade('remove')]
     protected ObjectStorage $options;
 
     /**
@@ -114,8 +116,8 @@ class Attribute extends AbstractEntity
      * Image.
      *
      * @var \TYPO3\CMS\Extbase\Domain\Model\FileReference
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
      */
+    #[Lazy]
     protected $image;
 
     /**

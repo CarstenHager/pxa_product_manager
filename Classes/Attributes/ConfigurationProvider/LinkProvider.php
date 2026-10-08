@@ -15,7 +15,7 @@ class LinkProvider extends AbstractProvider
     protected function overrideWithSpecificTca(array $tca): array
     {
         if ($this->isRequired()) {
-            $tca['config']['eval'] = 'required';
+            $tca['config']['required'] = true;
         }
 
         return $tca;

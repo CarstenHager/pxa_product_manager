@@ -1,0 +1,4 @@
+name: pixelant/pxa-product-manager
+label: 'Products Manager'
+dependencies:
+  - pixelant/demander

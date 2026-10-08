@@ -6,7 +6,6 @@ use Nimut\TestingFramework\TestCase\FunctionalTestCase;
 use Pixelant\PxaProductManager\Domain\Model\Category;
 use Pixelant\PxaProductManager\Domain\Repository\CategoryRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Persistence\PersistenceManagerInterface;
 
 class CategoryTest extends FunctionalTestCase
@@ -25,7 +24,7 @@ class CategoryTest extends FunctionalTestCase
     {
         parent::setUp();
 
-        $this->repository = GeneralUtility::makeInstance(ObjectManager::class)->get(CategoryRepository::class);
+        $this->repository = GeneralUtility::makeInstance(CategoryRepository::class);
     }
 
     /**
@@ -42,8 +41,7 @@ class CategoryTest extends FunctionalTestCase
 
         $this->repository->update($category);
 
-        $persistanceManager = GeneralUtility::makeInstance(ObjectManager::class)
-            ->get(PersistenceManagerInterface::class);
+        $persistanceManager = GeneralUtility::makeInstance(PersistenceManagerInterface::class);
         $persistanceManager->persistAll();
         $persistanceManager->clearState();
 

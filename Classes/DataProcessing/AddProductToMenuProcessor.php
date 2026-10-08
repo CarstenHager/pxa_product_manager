@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace Pixelant\PxaProductManager\DataProcessing;
 
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
+use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Context\Exception\AspectNotFoundException;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\ContentObject\DataProcessorInterface;
-use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 /**
  * This file is part of the "pxa_product_manager" Extension for TYPO3 CMS.
@@ -43,16 +44,18 @@ class AddProductToMenuProcessor implements DataProcessorInterface
         array $processorConfiguration,
         array $processedData
     ): array {
-        if (!$processorConfiguration['menus']) {
+        if (empty($processorConfiguration['menus'])) {
             return $processedData;
         }
         $productRecord = $this->getProductRecord();
 
         if ($productRecord) {
             $menus = GeneralUtility::trimExplode(',', $processorConfiguration['menus'], true);
+            $request = $GLOBALS['TYPO3_REQUEST'] ?? null;
+            $request = $request instanceof ServerRequestInterface ? $request : null;
             foreach ($menus as $menu) {
                 if (isset($processedData[$menu])) {
-                    $this->addProductRecordToMenu($productRecord, $processedData[$menu]);
+                    $this->addProductRecordToMenu($productRecord, $processedData[$menu], $request);
                 }
             }
         }
@@ -65,8 +68,13 @@ class AddProductToMenuProcessor implements DataProcessorInterface
      *
      * @param array $productRecord
      * @param array $menu
+     * @param ServerRequestInterface|null $request
      */
-    protected function addProductRecordToMenu(array $productRecord, array &$menu): void
+    protected function addProductRecordToMenu(
+        array $productRecord,
+        array &$menu,
+        ?ServerRequestInterface $request = null
+    ): void
     {
         foreach ($menu as &$menuItem) {
             $menuItem['current'] = 0;
@@ -77,7 +85,7 @@ class AddProductToMenuProcessor implements DataProcessorInterface
             'title' => $productRecord['name'],
             'active' => 1,
             'current' => 1,
-            'link' => GeneralUtility::getIndpEnv('TYPO3_REQUEST_URL'),
+            'link' => $request !== null ? (string)$request->getUri() : '',
             'isProduct' => true,
         ];
     }
@@ -90,8 +98,9 @@ class AddProductToMenuProcessor implements DataProcessorInterface
     protected function getProductRecord(): array
     {
         $productId = 0;
-        $productShowVars = GeneralUtility::_GET('tx_pxaproductmanager_productshow') ?? [];
-        $productRenderVars = GeneralUtility::_GET('tx_pxaproductmanager_productrender') ?? [];
+        $query = ($GLOBALS['TYPO3_REQUEST'] ?? null)?->getQueryParams() ?? [];
+        $productShowVars = (array)($query['tx_pxaproductmanager_productshow'] ?? []);
+        $productRenderVars = (array)($query['tx_pxaproductmanager_productrender'] ?? []);
         $vars = array_merge($productShowVars, $productRenderVars);
 
         if (isset($vars['product'])) {
@@ -105,16 +114,16 @@ class AddProductToMenuProcessor implements DataProcessorInterface
                 ->select('*')
                 ->from(ProductRepository::TABLE_NAME)
                 ->where(
-                    $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($productId, \PDO::PARAM_INT))
+                    $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($productId, \Doctrine\DBAL\ParameterType::INTEGER))
                 )
-                ->execute()
+                ->executeQuery()
                 ->fetchAssociative();
 
             if ($row) {
-                $row = $this->getTsfe()->sys_page->getRecordOverlay(
+                $row = GeneralUtility::makeInstance(PageRepository::class)->getLanguageOverlay(
                     ProductRepository::TABLE_NAME,
                     $row,
-                    $this->getCurrentLanguage()
+                    GeneralUtility::makeInstance(Context::class)->getAspect('language')
                 );
             }
 
@@ -144,11 +153,4 @@ class AddProductToMenuProcessor implements DataProcessorInterface
         return (int)$languageId;
     }
 
-    /**
-     * @return TypoScriptFrontendController
-     */
-    protected function getTsfe(): TypoScriptFrontendController
-    {
-        return $GLOBALS['TSFE'];
-    }
 }

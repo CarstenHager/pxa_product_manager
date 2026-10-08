@@ -68,22 +68,31 @@ class AttributeUtility
                 $queryBuilder->expr()->eq('a.uid', AttributeValueRepository::TABLE_NAME . '.attribute')
             )
             ->where(
-                $queryBuilder->expr()->eq(AttributeValueRepository::TABLE_NAME . '.product', $productId)
+                $queryBuilder->expr()->eq(
+                    AttributeValueRepository::TABLE_NAME . '.product',
+                    $queryBuilder->createNamedParameter($productId, \Doctrine\DBAL\ParameterType::INTEGER)
+                )
             );
 
         if (!empty($attributeIds)) {
             $queryBuilder->andWhere(
-                $queryBuilder->expr()->in(AttributeValueRepository::TABLE_NAME . '.attribute', $attributeIds)
+                $queryBuilder->expr()->in(
+                    AttributeValueRepository::TABLE_NAME . '.attribute',
+                    $queryBuilder->createNamedParameter($attributeIds, \Doctrine\DBAL\ArrayParameterType::INTEGER)
+                )
             );
         }
 
         if (!empty($attributeIdentifiers)) {
             $queryBuilder->andWhere(
-                $queryBuilder->expr()->in('a.identifier', $attributeIdentifiers)
+                $queryBuilder->expr()->in(
+                    'a.identifier',
+                    $queryBuilder->createNamedParameter($attributeIdentifiers, \Doctrine\DBAL\ArrayParameterType::STRING)
+                )
             );
         }
 
-        $attributes = $queryBuilder->execute()->fetchAllAssociativeIndexed();
+        $attributes = $queryBuilder->executeQuery()->fetchAllAssociativeIndexed();
 
         if (is_array($attributes)) {
             return $attributes;
@@ -114,7 +123,7 @@ class AttributeUtility
         $row = $queryBuilder
             ->select(...GeneralUtility::trimExplode(',', $selectFields, true))
             ->from(AttributeRepository::TABLE_NAME)
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         if (is_array($row)) {
@@ -158,17 +167,21 @@ class AttributeUtility
             return [];
         }
 
-        $fieldTcaConfiguration = BackendUtility::getTcaFieldConfiguration(
-            ProductTypeRepository::TABLE_NAME,
-            'attribute_sets'
-        );
+        // BackendUtility::getTcaFieldConfiguration() was removed in TYPO3 v14.
+        // The TCA is available here because this helper is called after the
+        // TYPO3 bootstrap has loaded the complete TCA configuration.
+        $fieldTcaConfiguration = $GLOBALS['TCA'][ProductTypeRepository::TABLE_NAME]['columns']['attribute_sets']['config'] ?? [];
+        $mmTable = (string)($fieldTcaConfiguration['MM'] ?? '');
+        if ($mmTable === '') {
+            return [];
+        }
 
         /** @var RelationHandler $relationHandler */
         $relationHandler = GeneralUtility::makeInstance(RelationHandler::class);
         $relationHandler->start(
             '',
             AttributeSetRepository::TABLE_NAME,
-            $fieldTcaConfiguration['MM'],
+            $mmTable,
             $productTypeId,
             ProductTypeRepository::TABLE_NAME,
             $fieldTcaConfiguration
@@ -193,17 +206,18 @@ class AttributeUtility
             return [];
         }
 
-        $fieldTcaConfiguration = BackendUtility::getTcaFieldConfiguration(
-            AttributeSetRepository::TABLE_NAME,
-            'attributes'
-        );
+        $fieldTcaConfiguration = $GLOBALS['TCA'][AttributeSetRepository::TABLE_NAME]['columns']['attributes']['config'] ?? [];
+        $mmTable = (string)($fieldTcaConfiguration['MM'] ?? '');
+        if ($mmTable === '') {
+            return [];
+        }
 
         /** @var RelationHandler $relationHandler */
         $relationHandler = GeneralUtility::makeInstance(RelationHandler::class);
         $relationHandler->start(
             '',
             AttributeRepository::TABLE_NAME,
-            $fieldTcaConfiguration['MM'],
+            $mmTable,
             $attributeSetId,
             AttributeSetRepository::TABLE_NAME,
             $fieldTcaConfiguration
@@ -240,10 +254,16 @@ class AttributeUtility
                 $queryBuilder->expr()->eq('av.attribute', AttributeRepository::TABLE_NAME . '.uid')
             )
             ->where(
-                $queryBuilder->expr()->eq('product', $queryBuilder->createNamedParameter($productId)),
-                $queryBuilder->expr()->in('attribute', $attributeIds)
+                $queryBuilder->expr()->eq(
+                    'product',
+                    $queryBuilder->createNamedParameter($productId, \Doctrine\DBAL\ParameterType::INTEGER)
+                ),
+                $queryBuilder->expr()->in(
+                    'attribute',
+                    $queryBuilder->createNamedParameter($attributeIds, \Doctrine\DBAL\ArrayParameterType::INTEGER)
+                )
             )
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         if (is_array($attributeValues)) {
@@ -266,7 +286,7 @@ class AttributeUtility
     {
         $attributeValue = self::findAttributeValues($productId, [$attributeId], $selectFields);
 
-        return array_pop($attributeValue);
+        return is_array($attributeValue) ? array_pop($attributeValue) : null;
     }
 
     /**
@@ -283,12 +303,23 @@ class AttributeUtility
             ->select('*')
             ->from(AttributeValueRepository::TABLE_NAME)
             ->where(
-                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid))
+                $queryBuilder->expr()->eq(
+                    'uid',
+                    $queryBuilder->createNamedParameter($uid, \Doctrine\DBAL\ParameterType::INTEGER)
+                )
             )
-            ->execute()
+            ->executeQuery()
             ->fetchAssociative();
 
+        if (!is_array($attributeValue) || empty($attributeValue['attribute'])) {
+            return null;
+        }
+
         $attribute = self::findAttribute($attributeValue['attribute']);
+
+        if (!is_array($attribute)) {
+            return null;
+        }
 
         if (
             $attribute['type'] === Attribute::ATTRIBUTE_TYPE_IMAGE ||
@@ -322,9 +353,12 @@ class AttributeUtility
             ->select(...GeneralUtility::trimExplode(',', $selectFields, true))
             ->from(OptionRepository::TABLE_NAME)
             ->where(
-                $queryBuilder->expr()->eq('attribute', $queryBuilder->createNamedParameter($attributeId))
+                $queryBuilder->expr()->eq(
+                    'attribute',
+                    $queryBuilder->createNamedParameter($attributeId, \Doctrine\DBAL\ParameterType::INTEGER)
+                )
             )
-            ->execute()
+            ->executeQuery()
             ->fetchAllAssociative();
 
         if (is_array($row)) {
@@ -351,10 +385,10 @@ class AttributeUtility
             ->where(
                 $queryBuilder->expr()->eq(
                     'uid',
-                    $queryBuilder->createNamedParameter($uid, \PDO::PARAM_INT)
+                    $queryBuilder->createNamedParameter($uid, \Doctrine\DBAL\ParameterType::INTEGER)
                 )
             )
-            ->execute();
+            ->executeStatement();
     }
 
     /**

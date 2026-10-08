@@ -42,7 +42,7 @@ class AttributeTypeValidationProcessDatamap
                     '"' . self::FALLBACK_TYPE . '".',
                     0,
                     $data = [],
-                    (int)$fieldArray['pid']
+                    (int)($fieldArray['pid'] ?? 0)
                 );
 
                 $fieldArray['type'] = self::FALLBACK_TYPE;
@@ -60,7 +60,7 @@ class AttributeTypeValidationProcessDatamap
                     'Attribute type is required. It was changed to "' . self::FALLBACK_TYPE . '".',
                     0,
                     $data = [],
-                    (int)$fieldArray['pid'],
+                    (int)($fieldArray['pid'] ?? 0),
                     $id
                 );
 

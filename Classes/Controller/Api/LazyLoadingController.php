@@ -41,7 +41,7 @@ class LazyLoadingController extends AbstractBaseLazyLoadingController
      *
      * @param ProductDemand $demand
      */
-    public function listAction(ProductDemand $demand): void
+    public function listAction(ProductDemand $demand): \Psr\Http\Message\ResponseInterface
     {
         $demand->setOrderByAllowed($this->settings['demand']['orderByAllowed'] ?? '');
         $products = $this->productRepository->findDemanded($demand);
@@ -52,5 +52,6 @@ class LazyLoadingController extends AbstractBaseLazyLoadingController
 
         $this->view->setVariablesToRender(['response']);
         $this->view->assign('response', $response);
+        return $this->jsonResponse();
     }
 }

@@ -2,30 +2,26 @@
     <sheets>
         <sDEF>
             <ROOT>
-                <TCEforms>
-                    <sheetTitle>LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:flexform.sheet_title</sheetTitle>
-                </TCEforms>
+                <sheetTitle>LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:flexform.sheet_title</sheetTitle>
                 <type>array</type>
                 <el>
                     <switchableControllerActions>
-                        <TCEforms>
-                            <onChange>reload</onChange>
-                            <label>LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:flexform.mode</label>
-                            <config>
-                                <type>select</type>
-                                <renderType>selectSingle</renderType>
-                                <items>
-                                    <numIndex index="0">
-                                        <numIndex index="0">LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:flexform.mode.select_mode</numIndex>
-                                        <numIndex index="1">0</numIndex>
-                                    </numIndex>
-                                    <numIndex index="1">
-                                        <numIndex index="0">LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:flexform.mode.product_controller</numIndex>
-                                        <numIndex index="1">--div--</numIndex>
-                                    </numIndex>
-                                </items>
-                            </config>
-                        </TCEforms>
+                        <onChange>reload</onChange>
+                        <label>LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:flexform.mode</label>
+                        <config>
+                            <type>select</type>
+                            <renderType>selectSingle</renderType>
+                            <items>
+                                <numIndex index="0">
+                                    <numIndex index="0">LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:flexform.mode.select_mode</numIndex>
+                                    <numIndex index="1">0</numIndex>
+                                </numIndex>
+                                <numIndex index="1">
+                                    <numIndex index="0">LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:flexform.mode.product_controller</numIndex>
+                                    <numIndex index="1">--div--</numIndex>
+                                </numIndex>
+                            </items>
+                        </config>
                     </switchableControllerActions>
                 </el>
             </ROOT>

@@ -4,56 +4,28 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Configuration\Site;
 
-use TYPO3\CMS\Core\Http\ServerRequest;
+use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Site\Entity\Site;
 
+/** Liest Produktmanager-Einstellungen aus der Site des aktuellen Requests. */
 class SettingsReader
 {
-    /**
-     * Prefix of settings.
-     *
-     * @var string
-     */
     protected string $prefix = 'pxapm_';
+    protected ?ServerRequestInterface $request = null;
 
-    /**
-     * @var array
-     */
-    protected array $settings = [];
-
-    /**
-     * @var ServerRequest
-     */
-    protected ServerRequest $request;
-
-    public function injectServerRequest(ServerRequest $request): void
+    public function setRequest(ServerRequestInterface $request): void
     {
         $this->request = $request;
     }
 
-    /**
-     * Read value from settings by key.
-     *
-     * @param string $key
-     * @return mixed|null
-     */
     public function getValue(string $key)
     {
-        if (strpos($key, $this->prefix) !== 0) {
-            $key = $this->prefix . $key;
+        $request = $this->request ?? ($GLOBALS['TYPO3_REQUEST'] ?? null);
+        $site = $request instanceof ServerRequestInterface ? $request->getAttribute('site') : null;
+        if (!$site instanceof Site) {
+            return null;
         }
-
-        return $this->settings[$key] ?? null;
-    }
-
-    /**
-     * Init settings.
-     */
-    protected function init(): void
-    {
-        $site = $this->request->getAttribute('site');
-        if ($site && ($site instanceof Site)) {
-            $this->settings = $site->getConfiguration();
-        }
+        $key = str_starts_with($key, $this->prefix) ? $key : $this->prefix . $key;
+        return $site->getConfiguration()[$key] ?? null;
     }
 }

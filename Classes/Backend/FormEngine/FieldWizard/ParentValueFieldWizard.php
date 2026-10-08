@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Backend\FormEngine\FieldWizard;
 
+use Pixelant\PxaProductManager\Utility\TcaUtility;
 use Pixelant\PxaProductManager\Domain\Repository\AttributeValueRepository;
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
 use Pixelant\PxaProductManager\Utility\AttributeUtility;
 use TYPO3\CMS\Backend\Form\AbstractNode;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
-use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Imaging\IconFactory;
+use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Utility\LocalizationUtility;
 
@@ -30,19 +31,20 @@ class ParentValueFieldWizard extends AbstractNode
     public function render(): array
     {
         $result = $this->initializeResultArray();
+        $tableName = (string)($this->data['tableName'] ?? '');
+        $record = (array)($this->data['databaseRow'] ?? []);
 
-        if ($this->data['tableName'] === ProductRepository::TABLE_NAME) {
-            $tableName = $this->data['tableName'];
-            $fieldName = $this->data['fieldName'];
-            $record = $this->data['databaseRow'];
-            $parentRecord = $this->data['databaseRow']['parent'][0]['row'];
-        } elseif ($this->data['tableName'] === AttributeValueRepository::TABLE_NAME) {
-            $tableName = $this->data['tableName'];
+        if ($tableName === ProductRepository::TABLE_NAME) {
+            $fieldName = (string)($this->data['fieldName'] ?? '');
+            $parentRecord = [];
+            if (isset($record['parent']) && is_array($record['parent'])) {
+                $parentRecord = (array)($record['parent'][0]['row'] ?? []);
+            }
+        } elseif ($tableName === AttributeValueRepository::TABLE_NAME) {
             $fieldName = 'value';
-            $record = $this->data['databaseRow'];
             $parentRecord = AttributeUtility::findAttributeValue(
-                (int)$record['product'],
-                (int)$record['attribute'][0]['uid']
+                (int)($record['product'] ?? 0),
+                (int)TcaUtility::getAttributeUid($record['attribute'] ?? 0)
             );
         } else {
             return $result;
@@ -59,13 +61,13 @@ class ParentValueFieldWizard extends AbstractNode
         $icon = GeneralUtility::makeInstance(IconFactory::class)->getIconForRecord(
             $tableName,
             $record,
-            Icon::SIZE_SMALL
+            IconSize::SMALL
         );
 
         $processedParentValue = BackendUtility::getProcessedValueExtra(
             $tableName,
             $fieldName,
-            $parentRecord[$fieldName]
+            $parentRecord[$fieldName] ?? ''
         );
 
         $html = '<div class="bg-info" style="padding: .2em" title="' . htmlspecialchars($label) . '">';

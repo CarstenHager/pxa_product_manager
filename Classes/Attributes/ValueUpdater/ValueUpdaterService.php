@@ -48,7 +48,7 @@ class ValueUpdaterService implements UpdaterInterface
         $attribute = $this->castToInt($attribute);
 
         $attributeRow = $this->attributeValueRepository->findRawByProductAndAttribute($product, $attribute);
-        if ($attributeRow) {
+        if (is_array($attributeRow) && isset($attributeRow['uid'])) {
             $this->attributeValueRepository->updateValue((int)$attributeRow['uid'], $value);
         } else {
             $this->attributeValueRepository->createWithValue($product, $attribute, $value);

@@ -59,14 +59,14 @@ class StructureLoader
     {
         if ($actionConfiguration !== null) {
             // Load sub-form
-            foreach ($actionConfiguration['flexforms'] as $flexform) {
+            foreach (($actionConfiguration['flexforms'] ?? []) as $flexform) {
                 $dataStructure = $this->updateDataStructureWithFlexform($dataStructure, $flexform);
             }
 
             // Exclude fields
-            foreach ($actionConfiguration['excludeFields'] as $excludeField) {
-                foreach ($dataStructure['sheets'] as $sheet => $sheetConf) {
-                    foreach ($sheetConf['ROOT']['el'] as $field => $fieldConf) {
+            foreach (($actionConfiguration['excludeFields'] ?? []) as $excludeField) {
+                foreach (($dataStructure['sheets'] ?? []) as $sheet => $sheetConf) {
+                    foreach (($sheetConf['ROOT']['el'] ?? []) as $field => $fieldConf) {
                         if ($field === $excludeField) {
                             unset($dataStructure['sheets'][$sheet]['ROOT']['el'][$field]);
                         }

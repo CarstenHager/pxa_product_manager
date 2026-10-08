@@ -15,12 +15,10 @@ PAGE_LAZY_LOADING {
         }
     }
 
-    10 = USER
+    10 = EXTBASEPLUGIN
     10 {
-        userFunc = TYPO3\CMS\Extbase\Core\Bootstrap->run
         extensionName = PxaProductManager
         pluginName = LazyLoading
-        vendorName = Pixelant
     }
 }
 

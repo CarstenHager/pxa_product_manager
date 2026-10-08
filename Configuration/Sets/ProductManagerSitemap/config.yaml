@@ -1,0 +1,5 @@
+name: pixelant/pxa-product-manager-sitemap
+label: 'Products Manager: Xml Sitemap'
+dependencies:
+  - pixelant/pxa-product-manager
+  - typo3/seo-sitemap

@@ -19,15 +19,16 @@ class CategoryUserFunction
      */
     public function pageModuleLinkField($PA, $fObj): string
     {
-        if (!current($PA['row']['pxapm_content_page'])) {
+        $pages = $PA['row']['pxapm_content_page'] ?? [];
+        $page = is_array($pages) ? current($pages) : false;
+        if (!is_array($page) || empty($page['uid'])) {
             return '';
         }
 
-        $page = current($PA['row']['pxapm_content_page']);
 
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $uri = (string)$uriBuilder->buildUriFromRoute('web_layout', ['id' => $page['uid']]);
 
-        return sprintf('<a href="%s" class="btn btn-default">%s</a>', $uri, $page['title']);
+        return sprintf('<a href="%s" class="btn btn-default">%s</a>', htmlspecialchars($uri), htmlspecialchars((string)($page['title'] ?? $page['uid'])));
     }
 }

@@ -1,3 +1,56 @@
+# Mapping
+# Note if more mappings are added, please add them to
+# pxa_product_manager/Classes/Service/TypolinkBuilderService.php -> checkExtbaseMappings()
+# function to, or else an exception may occur if first visit to site after a clear cache
+# is a redirect with a Product or Category as target
+config.tx_extbase {
+    persistence {
+        classes {
+            Pixelant\PxaProductManager\Domain\Model\Image {
+                mapping {
+                    tableName = sys_file_reference
+                    columns.pxapm_type.mapOnProperty = type
+                }
+            }
+            Pixelant\PxaProductManager\Domain\Model\AttributeFile {
+                mapping {
+                    tableName = sys_file_reference
+                    columns.pxa_attribute.mapOnProperty = attribute
+                }
+            }
+            Pixelant\PxaProductManager\Domain\Model\Category {
+                mapping {
+                    tableName = sys_category
+                    columns {
+                        pxapm_products.mapOnProperty = products
+                        pxapm_attributes_sets.mapOnProperty = attributesSets
+                        pxapm_description.mapOnProperty = description
+                        pxapm_image.mapOnProperty = image
+                        pxapm_banner_image.mapOnProperty = bannerImage
+                        pxapm_subcategories.mapOnProperty = subCategories
+                        pxapm_tax_rate.mapOnProperty = taxRate
+                        pxapm_content_page.mapOnProperty = contentPage
+                        pxapm_content_colpos.mapOnProperty = contentColPos
+                        pxapm_hidden_in_navigation.mapOnProperty = hiddenInNavigation
+                        pxapm_hide_products.mapOnProperty = hideProducts
+                        pxapm_hide_subcategories.mapOnProperty = hideSubCategories
+                        pxapm_alternative_title.mapOnProperty = alternativeTitle
+                        pxapm_meta_description.mapOnProperty = metaDescription
+                        pxapm_keywords.mapOnProperty = keywords
+                    }
+                }
+            }
+        }
+    }
+}
+
+@import 'EXT:pxa_product_manager/Configuration/TypoScript/Library/'
+@import 'EXT:pxa_product_manager/Configuration/TypoScript/Api/'
+@import 'EXT:pxa_product_manager/Configuration/TypoScript/TempPluginRenderer/'
+@import 'EXT:pxa_product_manager/Configuration/TypoScript/Page/'
+@import 'EXT:pxa_product_manager/Configuration/TypoScript/Config/'
+@import 'EXT:pxa_product_manager/Configuration/TypoScript/Demander/'
+
 plugin.tx_pxaproductmanager {
     view {
         templateRootPaths {
@@ -191,6 +244,22 @@ plugin.tx_pxaproductmanager {
                     key = fe.orderBy.tstamp_desc
                     value = tstamp,desc
                 }
+                40 {
+                    key = fe.orderBy.sorting_asc
+                    value = sorting,asc
+                }
+                50 {
+                    key = fe.orderBy.sorting_desc
+                    value = sorting,desc
+                }
+                60 {
+                    key = fe.orderBy.sku_asc
+                    value = sku,asc
+                }
+                70 {
+                    key = fe.orderBy.sku_desc
+                    value = sku,desc
+                }
             }
             # to include properties in list, add field names in list (usp,tax_rate)
             additionalFields =
@@ -247,13 +316,6 @@ plugin.tx_pxaproductmanager {
     }
 }
 
-
-<INCLUDE_TYPOSCRIPT: source="DIR:EXT:pxa_product_manager/Configuration/TypoScript/Library/" extensions="typoscript">
-<INCLUDE_TYPOSCRIPT: source="DIR:EXT:pxa_product_manager/Configuration/TypoScript/Api/" extensions="typoscript">
-<INCLUDE_TYPOSCRIPT: source="DIR:EXT:pxa_product_manager/Configuration/TypoScript/TempPluginRenderer/" extensions="typoscript">
-<INCLUDE_TYPOSCRIPT: source="DIR:EXT:pxa_product_manager/Configuration/TypoScript/Page/" extensions="typoscript">
-<INCLUDE_TYPOSCRIPT: source="DIR:EXT:pxa_product_manager/Configuration/TypoScript/Config/" extensions="typoscript">
-<INCLUDE_TYPOSCRIPT: source="DIR:EXT:pxa_product_manager/Configuration/TypoScript/Demander/" extensions="typoscript">
 
 page {
     includeCSS.product_manager_basic = EXT:pxa_product_manager/Resources/Public/Css/product_manager_basic.css

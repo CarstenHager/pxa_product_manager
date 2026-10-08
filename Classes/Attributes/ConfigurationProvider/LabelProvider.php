@@ -16,7 +16,7 @@ class LabelProvider extends AbstractProvider
     {
         if ($this->isRequired()) {
             $tca['config']['eval']
-                = $tca['config']['eval'] ? $tca['config']['eval'] . ',required' : 'required';
+                = !empty($tca['config']['eval']) ? $tca['config']['eval'] . ',required' : 'required';
         }
 
         return $tca;

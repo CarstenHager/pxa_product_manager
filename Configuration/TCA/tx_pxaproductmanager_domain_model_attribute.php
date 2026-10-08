@@ -1,6 +1,6 @@
 <?php
 
-defined('TYPO3_MODE') || die;
+defined('TYPO3') || die;
 
 return (function () {
     $ll = 'LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_db.xlf:';
@@ -327,7 +327,7 @@ return (function () {
             'image' => [
                 'exclude' => 1,
                 'label' => $ll . 'tx_pxaproductmanager_domain_model_attribute.image',
-                'config' => \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::getFileFieldTCAConfig(
+                'config' => \Pixelant\PxaProductManager\Utility\TcaFileFieldConfiguration::get(
                     'image',
                     [
                         'appearance' => [
@@ -340,7 +340,6 @@ return (function () {
                         'foreign_match_fields' => [
                             'fieldname' => 'image',
                             'tablenames' => 'tx_pxaproductmanager_domain_model_attribute',
-                            'table_local' => 'sys_file',
                         ],
                         'maxitems' => 1,
                         // @codingStandardsIgnoreStart
@@ -352,7 +351,7 @@ return (function () {
                             --palette--;LLL:EXT:lang/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;imageoverlayPalette,
                             --palette--;;filePalette',
                                 ],
-                                \TYPO3\CMS\Core\Resource\File::FILETYPE_IMAGE => [
+                                \TYPO3\CMS\Core\Resource\FileType::IMAGE->value => [
                                     'showitem' => '
                             --palette--;LLL:EXT:lang/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;pxaProductManagerPalette,
                             --palette--;LLL:EXT:lang/locallang_tca.xlf:sys_file_reference.imageoverlayPalette;imageoverlayPalette,

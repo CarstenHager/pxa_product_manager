@@ -35,13 +35,12 @@ class LinkViewHelper extends AbstractTagBasedViewHelper
     public function initializeArguments(): void
     {
         parent::initializeArguments();
-        $this->registerUniversalTagAttributes();
 
         $this->registerArgument('product', Product::class, 'Product', true, null);
         $this->registerArgument('category', Category::class, 'Category', false, null);
         $this->registerArgument('returnUrl', 'bool', 'Just return url', false, false);
         $this->registerArgument('target', 'string', 'Link target', false, null);
-        $this->registerArgument('absolute', 'string', 'Force absolute link', false, false);
+        $this->registerArgument('absolute', 'bool', 'Force absolute link', false, false);
         $this->registerArgument('page', 'int', 'Target page uid', false);
     }
 
@@ -50,14 +49,13 @@ class LinkViewHelper extends AbstractTagBasedViewHelper
      *
      * @return string
      */
-    public function render()
+    public function render(): string
     {
-        $page = (int) ($this->arguments['page']);
-        $product = $this->arguments['product'];
-        $category = $this->arguments['category'];
-        $target = $this->arguments['target'];
-        $returnUrl = (bool)$this->arguments['returnUrl'];
-        $absolute = (bool)$this->arguments['absolute'];
+        $product = $this->arguments['product'] ?? null;
+        $category = $this->arguments['category'] ?? null;
+        $target = $this->arguments['target'] ?? null;
+        $returnUrl = (bool)($this->arguments['returnUrl'] ?? false);
+        $absolute = (bool)($this->arguments['absolute'] ?? false);
 
         $content = (string)$this->renderChildren();
 

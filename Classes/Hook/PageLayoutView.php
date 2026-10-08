@@ -8,9 +8,8 @@ use Pixelant\PxaProductManager\Configuration\Flexform\Registry;
 use Pixelant\PxaProductManager\Configuration\Flexform\StructureLoader;
 use Pixelant\PxaProductManager\Domain\Collection\CanCreateCollection;
 use Pixelant\PxaProductManager\Translate\CanTranslateInBackend;
-use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Service\FlexFormService;
+use TYPO3\CMS\Core\Configuration\FlexForm\FlexFormTools;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\Exception\MissingArrayPathException;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -44,7 +43,7 @@ class PageLayoutView
      * @param StructureLoader $loader
      * @param Registry $registry
      */
-    public function __construct(StructureLoader $loader = null, Registry $registry = null)
+    public function __construct(?StructureLoader $loader = null, ?Registry $registry = null)
     {
         $this->loader = $loader ?? GeneralUtility::makeInstance(StructureLoader::class);
         $this->registry = $registry ?? GeneralUtility::makeInstance(Registry::class);
@@ -65,22 +64,36 @@ class PageLayoutView
 
         $additionalInfo = '';
 
-        if ($params['row']['list_type'] === 'pxaproductmanager_pi1') {
-            $flexFormSettings = GeneralUtility::makeInstance(FlexFormService::class)->convertFlexFormContentToArray(
+        $contentType = (string)($params['row']['CType'] ?? '');
+        if (in_array(
+            $contentType,
+            [
+                'pxaproductmanager_productlist',
+                'pxaproductmanager_productshow',
+                'pxaproductmanager_productrender',
+                'pxaproductmanager_customproductlist',
+            ],
+            true
+        ) && !empty($params['row']['pi_flexform'])) {
+            $flexFormSettings = GeneralUtility::makeInstance(FlexFormTools::class)->convertFlexFormContentToArray(
                 $params['row']['pi_flexform']
             );
 
-            $switchableControllerActions = $flexFormSettings['switchableControllerActions'];
+            $switchableControllerActions = (string)($flexFormSettings['switchableControllerActions'] ?? '');
             if (!empty($switchableControllerActions)) {
                 $additionalInfo .= $this->modeLabel($switchableControllerActions);
 
                 $fieldsGroups = $this->getFlexformGroupedFields($switchableControllerActions);
 
                 foreach ($fieldsGroups as $fieldsGroup) {
-                    $additionalInfo .= '<b>' . $this->translate($fieldsGroup['label']) . '</b><br>';
+                    $fieldsGroup = is_array($fieldsGroup) ? $fieldsGroup : [];
+                    $additionalInfo .= '<b>' . $this->translate((string)($fieldsGroup['label'] ?? '')) . '</b><br>';
 
                     // Get value for each field
-                    foreach ($fieldsGroup['el'] as $fieldName => $fieldConfiguration) {
+                    foreach ((array)($fieldsGroup['el'] ?? []) as $fieldName => $fieldConfiguration) {
+                        if (!is_array($fieldConfiguration)) {
+                            continue;
+                        }
                         $additionalInfo .= $this->getFieldInformation(
                             $fieldName,
                             $fieldConfiguration,
@@ -108,10 +121,13 @@ class PageLayoutView
     {
         $actions = $this->registry->getAllRegisteredActions();
         if (isset($actions[$switchableControllerActions])) {
+            $action = is_array($actions[$switchableControllerActions])
+                ? $actions[$switchableControllerActions]
+                : [];
             return sprintf(
                 '<b>%s</b>: %s<br>%s',
                 $this->translate('flexform.mode'),
-                $this->translate($actions[$switchableControllerActions]['label']),
+                $this->translate((string)($action['label'] ?? '')),
                 static::$hrMarkup
             );
         }
@@ -129,18 +145,19 @@ class PageLayoutView
      */
     protected function getFieldInformation(string $name, array $config, array $values): string
     {
-        $info = '<b>' . $this->translate($config['label']) . '</b>: %s<br>';
+        $info = '<b>' . $this->translate((string)($config['label'] ?? $name)) . '</b>: %s<br>';
 
         try {
             $value = ArrayUtility::getValueByPath($values, $name, '.');
         } catch (MissingArrayPathException $exception) {
             return sprintf($info, $this->translate('be.extension_info.none'));
         }
-        $config = $config['config'];
+        $config = (array)($config['config'] ?? []);
 
-        switch ($config['type']) {
+        $configType = (string)($config['type'] ?? '');
+        switch ($configType) {
             case 'group':
-                $value = $this->getValueFromDB($config['allowed'], (int)$value);
+                $value = $this->getValueFromDB((string)($config['allowed'] ?? ''), (int)$value);
 
                 break;
             case 'check':
@@ -156,7 +173,7 @@ class PageLayoutView
 
                 break;
             default:
-                $value = 'Unsupported type "' . $config['type'] . '"';
+                $value = 'Unsupported type "' . $configType . '"';
         }
 
         return sprintf($info, $value ?: $this->translate('be.extension_info.none'));
@@ -172,7 +189,10 @@ class PageLayoutView
     protected function getSelectBoxValue(array $config, $value): string
     {
         if (!empty($config['foreign_table'])) {
-            $value = $this->getValueFromDB($config['foreign_table'], ...GeneralUtility::intExplode(',', $value));
+            $valueList = is_array($value)
+                ? array_map('intval', $value)
+                : GeneralUtility::intExplode(',', (string)$value, true);
+            $value = $this->getValueFromDB((string)$config['foreign_table'], ...$valueList);
         } elseif (!empty($config['items'])) {
             // Search select item and use it label
             $item = $this->collection($config['items'])->searchByProperty('1', $value)->first();
@@ -204,7 +224,10 @@ class PageLayoutView
      */
     protected function getValueFromDB(string $table, ...$uids): string
     {
-        $titleField = $GLOBALS['TCA'][$table]['ctrl']['label'];
+        $titleField = (string)($GLOBALS['TCA'][$table]['ctrl']['label'] ?? '');
+        if ($table === '' || $titleField === '' || $uids === []) {
+            return '';
+        }
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable($table);
         $queryBuilder->getRestrictions()->removeAll();
 
@@ -213,10 +236,10 @@ class PageLayoutView
             ->from($table)
             ->where($queryBuilder->expr()->in(
                 'uid',
-                $queryBuilder->createNamedParameter($uids, Connection::PARAM_INT_ARRAY)
+                $queryBuilder->createNamedParameter($uids, \Doctrine\DBAL\ArrayParameterType::INTEGER)
             ))
-            ->execute()
-            ->fetchAll(\PDO::FETCH_COLUMN);
+            ->executeQuery()
+            ->fetchFirstColumn();
 
         return is_array($rows) ? implode(', ', $rows) : '';
     }
@@ -236,11 +259,17 @@ class PageLayoutView
         );
 
         $fields = [];
-        foreach ($dataStructure['sheets'] as $sheetName => $sheet) {
+        foreach ((array)($dataStructure['sheets'] ?? []) as $sheetName => $sheet) {
+            $sheet = is_array($sheet) ? $sheet : [];
+            $root = is_array($sheet['ROOT'] ?? null) ? $sheet['ROOT'] : [];
+            $elements = is_array($root['el'] ?? null) ? $root['el'] : [];
             $lll = 'LLL:EXT:pxa_product_manager/Resources/Private/Language/locallang_be.xlf:flexform.sheet_title';
             $fields[$sheetName] = [
-                'label' => $sheet['ROOT']['TCEforms']['sheetTitle'] ?? $lll,
-                'el' => array_map(fn (array $fieldConfig) => $fieldConfig['TCEforms'], $sheet['ROOT']['el']),
+                'label' => $root['TCEforms']['sheetTitle'] ?? $lll,
+                'el' => array_map(
+                    static fn (array $fieldConfig): array => (array)($fieldConfig['TCEforms'] ?? []),
+                    array_filter($elements, 'is_array')
+                ),
             ];
         }
 

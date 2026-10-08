@@ -35,14 +35,16 @@ class CalculateInlineFieldAttributeValueValueEvent
             ) ?? [];
 
             if (!empty($record)) {
-                switch (self::getAttributeType((int)$record['attribute'])) {
+                $attribute = (int)($record['attribute'] ?? 0);
+                $value = (string)($record['value'] ?? '');
+                switch (self::getAttributeType($attribute)) {
                     case Attribute::ATTRIBUTE_TYPE_FILE:
                     case Attribute::ATTRIBUTE_TYPE_IMAGE:
-                        $value = $record['attribute'] . '|' . implode(',', self::resolveInlineRelationTargets($record));
+                        $value = $attribute . '|' . implode(',', self::resolveInlineRelationTargets($record));
 
                         break;
                     default:
-                        $value = $record['attribute'] . '|' . $record['value'];
+                        $value = $attribute . '|' . $value;
 
                         break;
                 }
@@ -65,11 +67,12 @@ class CalculateInlineFieldAttributeValueValueEvent
             return self::$attributeTypes[$attributeId];
         }
 
-        $type = (int)BackendUtility::getRecord(
+        $record = BackendUtility::getRecord(
             AttributeRepository::TABLE_NAME,
             $attributeId,
             'type'
-        )['type'] ?? 0;
+        ) ?? [];
+        $type = (int)($record['type'] ?? 0);
 
         self::$attributeTypes[$attributeId] = $type;
 
@@ -92,20 +95,26 @@ class CalculateInlineFieldAttributeValueValueEvent
             $record
         );
 
-        if ($fieldTcaConfiguration['type'] === 'inline') {
+        if (($fieldTcaConfiguration['type'] ?? '') === 'inline') {
             $resolvedItems = DataInheritanceUtility::getRelationHandlerResolvedItems(
                 $fieldTcaConfiguration,
-                (int)$record['uid'],
+                (int)($record['uid'] ?? 0),
                 AttributeValueRepository::TABLE_NAME
             );
 
             if (!empty($resolvedItems)) {
                 foreach ($resolvedItems as $resolvedItem) {
-                    $resolvedItemsList[] = BackendUtility::getRecord(
-                        $resolvedItem['table'],
-                        $resolvedItem['uid'],
+                    $itemTable = (string)($resolvedItem['table'] ?? '');
+                    $itemUid = (int)($resolvedItem['uid'] ?? 0);
+                    if ($itemTable === '' || $itemUid <= 0) {
+                        continue;
+                    }
+                    $itemRecord = BackendUtility::getRecord(
+                        $itemTable,
+                        $itemUid,
                         'uid_local'
-                    )['uid_local'] ?? '';
+                    ) ?? [];
+                    $resolvedItemsList[] = $itemRecord['uid_local'] ?? '';
                 }
             }
         }

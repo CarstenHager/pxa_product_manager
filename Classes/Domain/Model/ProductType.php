@@ -28,6 +28,7 @@ namespace Pixelant\PxaProductManager\Domain\Model;
  */
 
 use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
+use TYPO3\CMS\Extbase\Attribute\ORM\Lazy;
 use TYPO3\CMS\Extbase\Persistence\ObjectStorage;
 
 /**
@@ -44,8 +45,8 @@ class ProductType extends AbstractEntity
      * Attribute sets.
      *
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\Pixelant\PxaProductManager\Domain\Model\AttributeSet>
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
      */
+    #[Lazy]
     protected ObjectStorage $attributeSets;
 
     /**

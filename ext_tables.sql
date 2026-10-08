@@ -29,7 +29,7 @@ CREATE TABLE tx_pxaproductmanager_domain_model_product
     singleview_page   varchar(2048),
 
     KEY parent(parent),
-    KEY language_identifier (l10n_parent,sys_language_uid),
+    KEY language_identifier (l10n_parent,sys_language_uid)
 );
 
 #
@@ -41,7 +41,7 @@ CREATE TABLE tx_pxaproductmanager_domain_model_attributeset
     label           varchar(255)     DEFAULT ''  NOT NULL,
     attributes      int(11) unsigned DEFAULT '0' NOT NULL,
     product_types   int(11) unsigned DEFAULT '0' NOT NULL,
-    layout          varchar(60)      DEFAULT 'Default' NOT NULL,
+    layout          varchar(60)      DEFAULT 'Default' NOT NULL
 );
 
 #
@@ -75,7 +75,7 @@ CREATE TABLE tx_pxaproductmanager_domain_model_attributevalue
     KEY product(product),
     KEY attribute(attribute),
     KEY attribute_value(value(40)),
-    KEY language_identifier (l10n_parent,sys_language_uid),
+    KEY language_identifier (l10n_parent,sys_language_uid)
 );
 
 #
@@ -86,7 +86,7 @@ CREATE TABLE tx_pxaproductmanager_domain_model_option
     attribute int(11) unsigned DEFAULT '0' NOT NULL,
     value     varchar(255)     DEFAULT ''  NOT NULL,
 
-    KEY attribute(attribute),
+    KEY attribute(attribute)
 );
 
 #
@@ -100,7 +100,7 @@ CREATE TABLE tx_pxaproductmanager_domain_model_link
     link        varchar(255)     DEFAULT ''  NOT NULL,
     description varchar(255)     DEFAULT ''  NOT NULL,
 
-    KEY product(product),
+    KEY product(product)
 );
 
 #
@@ -162,6 +162,7 @@ CREATE TABLE tx_pxaproductmanager_attributeset_record_mm
     sorting         int(11)      DEFAULT '0' NOT NULL,
     sorting_foreign int(11)      DEFAULT '0' NOT NULL,
 
+    PRIMARY KEY (uid_local, uid_foreign, tablenames, fieldname),
     KEY uid_local_foreign (uid_local, uid_foreign),
     KEY uid_foreign_tablefield (uid_foreign, tablenames(40), fieldname(3), sorting_foreign)
 );
@@ -178,7 +179,7 @@ CREATE TABLE tx_pxaproductmanager_domain_model_filter
     attribute   int(11) unsigned DEFAULT '0' NOT NULL,
     conjunction varchar(10)      DEFAULT ''  NOT NULL,
     gui_type    varchar(25)      DEFAULT ''  NOT NULL,
-    gui_state   varchar(25)      DEFAULT ''  NOT NULL,
+    gui_state   varchar(25)      DEFAULT ''  NOT NULL
 );
 
 #
@@ -189,7 +190,7 @@ CREATE TABLE tx_pxaproductmanager_domain_model_producttype
     name                  varchar(255)       DEFAULT ''     NOT NULL,
     attribute_sets        int(11) unsigned   DEFAULT '0'    NOT NULL,
     inherit_fields        text,
-    template_layout       varchar(255)       DEFAULT ''     NOT NULL,
+    template_layout       varchar(255)       DEFAULT ''     NOT NULL
 );
 
 #
@@ -233,5 +234,5 @@ CREATE TABLE tx_pxaproductmanager_inheritance_queue_item (
 	indexed int(11) DEFAULT '0' NOT NULL,
 	errors text NOT NULL,
 
-    KEY product_uid (product_uid),
+    KEY product_uid (product_uid)
 );

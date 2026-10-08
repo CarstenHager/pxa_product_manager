@@ -7,13 +7,18 @@ namespace Pixelant\PxaProductManager\Service\Url;
 use Pixelant\PxaProductManager\Domain\Model\Product;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
-use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
+use TYPO3\CMS\Frontend\Typolink\LinkFactory;
+use TYPO3\CMS\Frontend\Typolink\UnableToLinkException;
 
 /**
  * Class LinkBuilderService.
  */
 class UrlBuilderService implements UrlBuilderServiceInterface
 {
+    public function __construct(private readonly LinkFactory $linkFactory)
+    {
+    }
+
     /**
      * Link constants.
      */
@@ -38,26 +43,11 @@ class UrlBuilderService implements UrlBuilderServiceInterface
     ];
 
     /**
-     * @var TypoScriptFrontendController
-     */
-    protected TypoScriptFrontendController $tsfe;
-
-    /**
      * Flag if should force absolute url.
      *
      * @var bool
      */
     protected bool $absolute = false;
-
-    /**
-     * Initialize.
-     *
-     * @param TypoScriptFrontendController|null $typoScriptFrontendController
-     */
-    public function __construct(TypoScriptFrontendController $typoScriptFrontendController = null)
-    {
-        $this->tsfe = $typoScriptFrontendController ?? $GLOBALS['TSFE'];
-    }
 
     /**
      * URL for product.
@@ -67,20 +57,26 @@ class UrlBuilderService implements UrlBuilderServiceInterface
      */
     public function url(Product $product): string
     {
-        $pageUid = 0;
-        $params = '';
-
-        if (!empty($product) && !empty($product->getFirstSingleviewPage())) {
-            $dokType = $product->getFirstSingleviewPage()->getDoktype() ?? 1;
-            $namespace = static::NAMESPACES[$dokType];
-            $params = static::NAMESPACE_PARAMS[$namespace];
-            $params['product'] = $product->getUid();
-            $params = GeneralUtility::implodeArrayForUrl(
-                $namespace,
-                $params
-            );
-            $pageUid = $product->getFirstSingleviewPage()->getUid() ?? 0;
+        $page = $product->getFirstSingleviewPage();
+        $pageUid = $page?->getUid() ?? 0;
+        $dokType = $page?->getDoktype() ?? 1;
+        if ($pageUid === 0) {
+            $settings = GeneralUtility::makeInstance(\TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface::class)
+                ->getConfiguration(\TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface::CONFIGURATION_TYPE_SETTINGS, 'PxaProductManager');
+            $siteSettings = GeneralUtility::makeInstance(\Pixelant\PxaProductManager\Configuration\Site\SettingsReader::class);
+            $pageUid = (int)($settings['pids']['singleViewPid'] ?? 0) ?: (int)$siteSettings->getValue('singleViewPid');
+            if ($pageUid > 0) {
+                $pageRecord = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Domain\Repository\PageRepository::class)->getPage($pageUid);
+                $dokType = (int)($pageRecord['doktype'] ?? 1);
+            }
         }
+        if ($pageUid <= 0) {
+            return '';
+        }
+        $namespace = static::NAMESPACES[$dokType] ?? static::NAMESPACES[1];
+        $params = static::NAMESPACE_PARAMS[$namespace];
+        $params['product'] = $product->getUid();
+        $params = GeneralUtility::implodeArrayForUrl($namespace, $params);
 
         return $this->buildUri($pageUid, $params);
     }
@@ -90,7 +86,7 @@ class UrlBuilderService implements UrlBuilderServiceInterface
      */
     public function absolute(bool $absolute): void
     {
-        $this->absolute = true;
+        $this->absolute = $absolute;
     }
 
     /**
@@ -110,12 +106,23 @@ class UrlBuilderService implements UrlBuilderServiceInterface
             'forceAbsoluteUrl' => $this->absolute,
         ];
 
-        /** @var ContentObjectRenderer $contentObjectRenderer */
-        $contentObjectRenderer = GeneralUtility::makeInstance(
-            ContentObjectRenderer::class,
-            $this->tsfe
-        );
+        $request = $GLOBALS['TYPO3_REQUEST'] ?? null;
+        $contentObjectRenderer = $request instanceof \Psr\Http\Message\ServerRequestInterface
+            ? $request->getAttribute('currentContentObject')
+            : null;
+        if (!$contentObjectRenderer instanceof ContentObjectRenderer) {
+            $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
+            if ($request instanceof \Psr\Http\Message\ServerRequestInterface) {
+                $contentObjectRenderer->setRequest($request);
+            }
+        }
 
-        return $contentObjectRenderer->typolink_URL($typolink);
+        try {
+            return $this->linkFactory
+                ->create('', $typolink, $contentObjectRenderer)
+                ->getUrl();
+        } catch (UnableToLinkException) {
+            return '';
+        }
     }
 }

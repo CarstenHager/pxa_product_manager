@@ -4,26 +4,41 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Hook;
 
-use TYPO3\CMS\Backend\Controller\PageLayoutController;
+use TYPO3\CMS\Backend\Controller\Event\ModifyPageLayoutContentEvent;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Fluid\View\StandaloneView;
+use TYPO3\CMS\Core\View\ViewFactoryData;
+use TYPO3\CMS\Core\View\ViewFactoryInterface;
+use TYPO3\CMS\Core\View\ViewInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * Class PageHookRelatedCategories.
  */
 class PageHookRelatedCategories
 {
+    public function __construct(private readonly ViewFactoryInterface $viewFactory)
+    {
+    }
+
+    public function __invoke(ModifyPageLayoutContentEvent $event): void
+    {
+        $pageId = (int)($event->getRequest()->getQueryParams()['id'] ?? 0);
+        if ($pageId > 0) {
+            $event->addHeaderContent($this->renderForPage($pageId, $event->getRequest()));
+        }
+    }
+
     /**
      * @param array $params
      * @param PageLayoutController $pageLayoutController
      * @return string
      */
-    public function render(array $params, PageLayoutController $pageLayoutController): string
+    public function renderForPage(int $pageId, ?ServerRequestInterface $request = null): string
     {
-        $categories = $this->findCategoriesByContentPage((int)$pageLayoutController->id);
+        $categories = $this->findCategoriesByContentPage($pageId);
 
         if (empty($categories)) {
             return '';
@@ -32,30 +47,28 @@ class PageHookRelatedCategories
         $categoriesData = [];
         foreach ($categories as $category) {
             $categoriesData[] = [
-                'uri' => $this->editUri($category['uid']),
+                'uri' => $this->editUri((int)$category['uid'], $request),
                 'title' => $category['title'],
             ];
         }
 
-        $view = $this->view();
+        $view = $this->view($request);
         $view->assign('categories', $categoriesData);
 
         return $view->render();
     }
 
     /**
-     * @return object|StandaloneView
+     * @return ViewInterface
      */
-    protected function view()
+    protected function view(?ServerRequestInterface $request = null): ViewInterface
     {
-        $view = GeneralUtility::makeInstance(StandaloneView::class);
-        $view->setTemplatePathAndFilename(
-            GeneralUtility::getFileAbsFileName(
+        return $this->viewFactory->create(new ViewFactoryData(
+            templatePathAndFilename: GeneralUtility::getFileAbsFileName(
                 'EXT:pxa_product_manager/Resources/Private/Backend/Templates/PageModule/RelatedCategories.html'
-            )
-        );
-
-        return $view;
+            ),
+            request: $request,
+        ));
     }
 
     /**
@@ -65,7 +78,7 @@ class PageHookRelatedCategories
      * @return string
      * @throws \TYPO3\CMS\Backend\Routing\Exception\RouteNotFoundException
      */
-    protected function editUri(int $categoryUid): string
+    protected function editUri(int $categoryUid, ?ServerRequestInterface $request = null): string
     {
         /** @var UriBuilder $uriBuilder */
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
@@ -73,8 +86,8 @@ class PageHookRelatedCategories
         return (string)$uriBuilder->buildUriFromRoute(
             'record_edit',
             [
-                "edit[sys_category][${categoryUid}]" => 'edit',
-                'returnUrl' => GeneralUtility::getIndpEnv('REQUEST_URI'),
+                "edit[sys_category][{$categoryUid}]" => 'edit',
+                'returnUrl' => $request !== null ? (string)$request->getUri() : '',
             ],
             UriBuilder::ABSOLUTE_URL
         );
@@ -94,16 +107,26 @@ class PageHookRelatedCategories
             GeneralUtility::makeInstance(DeletedRestriction::class)
         );
 
-        return $queryBuilder
-            ->select('uid', 'title')
-            ->from('sys_category')
-            ->where(
-                $queryBuilder->expr()->eq(
-                    'pxapm_content_page',
-                    $queryBuilder->createNamedParameter($page, \PDO::PARAM_INT)
+        try {
+            return $queryBuilder
+                ->select('uid', 'title')
+                ->from('sys_category')
+                ->where(
+                    $queryBuilder->expr()->eq(
+                        'pxapm_content_page',
+                        $queryBuilder->createNamedParameter(
+                            $page,
+                            \Doctrine\DBAL\ParameterType::INTEGER
+                        )
+                    )
                 )
-            )
-            ->execute()
-            ->fetchAll();
+                ->executeQuery()
+                ->fetchAllAssociative();
+        } catch (\Doctrine\DBAL\Exception) {
+            // The field is added by the extension's database schema. During an
+            // upgrade it may not exist until the Database Analyzer has been
+            // run; page rendering must remain available in that interim state.
+            return [];
+        }
     }
 }

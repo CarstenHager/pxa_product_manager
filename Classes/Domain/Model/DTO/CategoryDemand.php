@@ -11,7 +11,7 @@ class CategoryDemand extends AbstractDemand
     /**
      * @var Category|int
      */
-    protected $parent = null;
+    protected Category|int|null $parent = null;
 
     /**
      * Show only enabled in navigation.
@@ -30,17 +30,20 @@ class CategoryDemand extends AbstractDemand
     /**
      * @return Category|null
      */
-    public function getParent(): ?Category
+    public function getParent(): Category|int|null
     {
         return $this->parent;
     }
 
     /**
-     * @param Category|int $parent
+     * @param Category|int|string|null $parent
      * @return CategoryDemand
      */
-    public function setParent($parent): self
+    public function setParent(Category|int|string|null $parent): self
     {
+        if (is_string($parent)) {
+            $parent = is_numeric($parent) ? (int)$parent : null;
+        }
         $this->parent = $parent;
 
         return $this;

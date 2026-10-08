@@ -29,18 +29,10 @@ class ProductRenderController extends AbstractController
      *
      * @param Product|null $product
      */
-    public function initAction(Product $product = null): void
+    public function initAction(?Product $product = null): \Psr\Http\Message\ResponseInterface
     {
-        if ($product === null) {
-            $this->forward('list');
-        } else {
-            $this->forward(
-                'show',
-                'ProductRender',
-                $this->request->getControllerExtensionName(),
-                $this->request->getArguments()
-            );
-        }
+        return (new \TYPO3\CMS\Extbase\Http\ForwardResponse($product === null ? 'list' : 'show'))
+            ->withArguments($product === null ? [] : ['product' => $product]);
     }
 
     /**
@@ -48,19 +40,20 @@ class ProductRenderController extends AbstractController
      *
      * @return void
      */
-    public function listAction(): void
+    public function listAction(): \Psr\Http\Message\ResponseInterface
     {
         $filters = [];
         $filterIds = $this->settings['filtering']['filters'] ?? [];
 
         if ($filterIds) {
-            $filters = $this->findRecordsByList($this->settings['filtering']['filters'], $this->filterRepository);
+            $filters = $this->findRecordsByList((string)($this->settings['filtering']['filters'] ?? ''), $this->filterRepository);
         }
 
         $this->view->assign('menu', $this->generateMenu());
         $this->view->assign('filters', $filters);
         $this->view->assign('orderBy', json_encode($this->createOrderByArray()));
         $this->view->assign('settingsJson', json_encode($this->lazyListSettings()));
+        return $this->htmlResponse();
     }
 
     /**
@@ -68,13 +61,14 @@ class ProductRenderController extends AbstractController
      *
      * @param Product $product
      */
-    public function showAction(Product $product): void
+    public function showAction(Product $product): \Psr\Http\Message\ResponseInterface
     {
-        $templateLayout = $product->getProductType()->getTemplateLayout();
+        $templateLayout = ($product->getProductType()?->getTemplateLayout() ?? '');
         if ($templateLayout !== '') {
             $this->view->setTemplatePathAndFilename($templateLayout);
         }
         $this->view->assignMultiple(compact('product'));
+        return $this->htmlResponse();
     }
 
     /**
@@ -88,7 +82,7 @@ class ProductRenderController extends AbstractController
         if (!empty($this->settings['pageTreeStartingPoint'])) {
             $pageTreeStartingPoint = $this->settings['pageTreeStartingPoint'];
         } else {
-            $pageTreeStartingPoint = $this->getTypoScriptFrontendController()->id;
+            $pageTreeStartingPoint = $this->getCurrentPageId();
         }
 
         if (empty($this->settings['productOrderings'])) {
@@ -99,16 +93,16 @@ class ProductRenderController extends AbstractController
         }
 
         if (empty($this->settings['limit'])) {
-            $this->settings['limit'] = $this->settings['listView']['limit'];
+            $this->settings['limit'] = $this->getListLimit();
         }
 
         return [
             'storagePid' => $this->storagePid(),
             'pageTreeStartingPoint' => $pageTreeStartingPoint,
-            'limit' => (int)$this->settings['limit'],
-            'filterConjunction' => $this->settings['filtering']['conjunction'],
-            'hideFilterOptionsNoResult' => (int)$this->settings['filtering']['hideFilterOptionsNoResult'],
-        ] + $this->settings['productOrderings'];
+            'limit' => $this->getListLimit(),
+            'filterConjunction' => $this->settings['filtering']['conjunction'] ?? 'and',
+            'hideFilterOptionsNoResult' => (int)($this->settings['filtering']['hideFilterOptionsNoResult'] ?? 0),
+        ] + $this->getProductOrderings();
     }
 
     /**

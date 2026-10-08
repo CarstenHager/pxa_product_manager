@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pixelant\PxaProductManager\Backend\FormDataProvider;
 
+use Pixelant\PxaProductManager\Utility\TcaUtility;
 use Pixelant\PxaProductManager\Domain\Collection\CanCreateCollection;
 use Pixelant\PxaProductManager\Domain\Repository\AttributeRepository;
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
@@ -39,7 +40,7 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
     /**
      * @param BackendFlashMessage $flashMessage
      */
-    public function __construct(BackendFlashMessage $flashMessage = null)
+    public function __construct(?BackendFlashMessage $flashMessage = null)
     {
         $this->flashMessage = $flashMessage ?? GeneralUtility::makeInstance(BackendFlashMessage::class);
     }
@@ -50,22 +51,33 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
      */
     public function addData(array $result): array
     {
+        $databaseRow = (array)($result['databaseRow'] ?? []);
         if (
-            $result['tableName'] !== ProductRepository::TABLE_NAME
+            ($result['tableName'] ?? '') !== ProductRepository::TABLE_NAME
             || (
-                $result['tableName'] === ProductRepository::TABLE_NAME
-                && !$result['databaseRow']['product_type']
+                ($result['tableName'] ?? '') === ProductRepository::TABLE_NAME
+                && empty($databaseRow['product_type'])
             )
         ) {
             return $result;
         }
 
-        $attributes = AttributeUtility::findAttributesForProductType((int)$result['databaseRow']['product_type'][0]);
+        if (!isset($result['processedTca']['columns']['attributes_values'])
+            || !is_array($result['processedTca']['columns']['attributes_values'])
+        ) {
+            return $result;
+        }
+
+        $productType = $databaseRow['product_type'] ?? 0;
+        if (is_array($productType)) {
+            $productType = $productType[0] ?? 0;
+        }
+        $attributes = AttributeUtility::findAttributesForProductType((int)$productType);
         $attributeUidList = array_column($attributes, 'uid');
         $attributeUidList = array_unique($attributeUidList);
 
         $children = $this->removeInvalidAttributeValuesChildren(
-            $result['processedTca']['columns']['attributes_values']['children'],
+            (array)($result['processedTca']['columns']['attributes_values']['children'] ?? []),
             $attributeUidList
         );
 
@@ -98,46 +110,50 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
      */
     protected function generateNewAttributeValueChild(array $result, int $attributeId)
     {
-        $parentConfig = $result['processedTca']['columns']['attributes_values']['config'];
-        $childTableName = $parentConfig['foreign_table'];
+        $parentConfig = (array)($result['processedTca']['columns']['attributes_values']['config'] ?? []);
+        $childTableName = (string)($parentConfig['foreign_table'] ?? '');
+        if ($childTableName === '') {
+            return [];
+        }
 
         /** @var InlineStackProcessor $inlineStackProcessor */
         $inlineStackProcessor = GeneralUtility::makeInstance(InlineStackProcessor::class);
-        $inlineStackProcessor->initializeByGivenStructure($result['inlineStructure']);
-        $inlineTopMostParent = $inlineStackProcessor->getStructureLevel(0);
+        $inlineStackProcessor->initializeByGivenStructure((array)($result['inlineStructure'] ?? []));
+        $inlineTopMostParent = (array)$inlineStackProcessor->getStructureLevel(0);
 
         /** @var TcaDatabaseRecord $formDataGroup */
         $formDataGroup = GeneralUtility::makeInstance(TcaDatabaseRecord::class);
         /** @var FormDataCompiler $formDataCompiler */
-        $formDataCompiler = GeneralUtility::makeInstance(FormDataCompiler::class, $formDataGroup);
+        $formDataCompiler = GeneralUtility::makeInstance(FormDataCompiler::class);
         // This is mostly copied from \TYPO3\CMS\Backend\Form\FormDataProvider\TcaInline
         $formDataCompilerInput = [
+            'request' => $result['request'] ?? ($GLOBALS['TYPO3_REQUEST'] ?? new \TYPO3\CMS\Core\Http\ServerRequest()),
             'command' => 'new',
             'tableName' => $childTableName,
             // Give incoming returnUrl down to children so they generate a returnUrl back to
             // the originally opening record, also see "originalReturnUrl" in inline container
             // and FormInlineAjaxController
-            'returnUrl' => $result['returnUrl'],
+            'returnUrl' => $result['returnUrl'] ?? '',
             'isInlineChild' => true,
-            'inlineStructure' => $result['inlineStructure'],
-            'inlineExpandCollapseStateArray' => $result['inlineExpandCollapseStateArray'],
-            'inlineFirstPid' => $result['inlineFirstPid'],
+            'inlineStructure' => (array)($result['inlineStructure'] ?? []),
+            'inlineExpandCollapseStateArray' => (array)($result['inlineExpandCollapseStateArray'] ?? []),
+            'inlineFirstPid' => $result['inlineFirstPid'] ?? 0,
             'inlineParentConfig' => $parentConfig,
 
             // values of the current parent element
             // it is always a string either an id or new...
-            'inlineParentUid' => $result['databaseRow']['uid'],
-            'inlineParentTableName' => $result['tableName'],
+            'inlineParentUid' => $result['databaseRow']['uid'] ?? 0,
+            'inlineParentTableName' => $result['tableName'] ?? '',
             // 'inlineParentFieldName' => $parentFieldName,
             'inlineParentFieldName' => 'attributes_values',
 
             // values of the top most parent element set on first level and not overridden on following levels
-            'inlineTopMostParentUid' => $result['inlineTopMostParentUid'] ?: $inlineTopMostParent['uid'] ?? 0,
+            'inlineTopMostParentUid' => ($result['inlineTopMostParentUid'] ?? 0) ?: ($inlineTopMostParent['uid'] ?? 0),
 
             // @codingStandardsIgnoreLine
-            'inlineTopMostParentTableName' => $result['inlineTopMostParentTableName'] ?: $inlineTopMostParent['table'] ?? '',
+            'inlineTopMostParentTableName' => ($result['inlineTopMostParentTableName'] ?? '') ?: ($inlineTopMostParent['table'] ?? ''),
             // @codingStandardsIgnoreLine
-            'inlineTopMostParentFieldName' => $result['inlineTopMostParentFieldName'] ?: $inlineTopMostParent['field'] ?? '',
+            'inlineTopMostParentFieldName' => ($result['inlineTopMostParentFieldName'] ?? '') ?: ($inlineTopMostParent['field'] ?? ''),
 
             'recordTypeValue' => $attributeId,
         ];
@@ -145,11 +161,16 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
         // For foreign_selector with useCombination $mainChild is the mm record
         // and $combinationChild is the child-child. For 1:n "normal" relations,
         // $mainChild is just the normal child record and $combinationChild is empty.
-        $newChild = $formDataCompiler->compile($formDataCompilerInput);
-        $newChild['databaseRow']['attribute'] = [$this->getAttributeArray($attributeId)];
+        $newChild = $formDataCompiler->compile($formDataCompilerInput, $formDataGroup);
+        $newChild['databaseRow'] ??= [];
+        $newChild['processedTca'] ??= [];
+        $newChild['processedTca']['columns'] ??= [];
+        $newChild['processedTca']['columns']['value'] ??= [];
+        $newChild['processedTca']['columns']['value']['config'] ??= [];
+        $newChild['databaseRow']['attribute'] = [(string)$attributeId];
 
         // This wizard sets the attribute type
-        if ($newChild['processedTca']['columns']['value']['config']['type'] === 'inline') {
+        if (($newChild['processedTca']['columns']['value']['config']['type'] ?? '') === 'inline') {
             // @codingStandardsIgnoreLine
             $newChild['processedTca']['ctrl']['container']['inline']['fieldWizard']['hiddenAttributeType']['renderType']
                 = 'hiddenAttributeType';
@@ -172,7 +193,7 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
     {
         $tableName = 'tx_pxaproductmanager_domain_model_attribute';
         $uid = $attributeId;
-        $record = BackendUtility::getRecordWSOL($tableName, $uid);
+        $record = BackendUtility::getRecordWSOL($tableName, $uid) ?? [];
         $title = BackendUtility::getRecordTitle($tableName, $record, false, false);
 
         return [
@@ -195,7 +216,10 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
         $addedAttributesUidList = [];
         $attributeValueChildren = [];
         foreach ($children as $key => $child) {
-            $attributeId = (int)$child['databaseRow']['attribute'][0]['uid'] ?? 0;
+            if (!is_array($child)) {
+                continue;
+            }
+            $attributeId = (int)TcaUtility::getAttributeUid($child['databaseRow']['attribute'] ?? 0);
             if ($attributeId > 0 && in_array($attributeId, $validAttributeIdsList, true)) {
                 if (!in_array($attributeId, $addedAttributesUidList, true)) {
                     $addedAttributesUidList[] = $attributeId;
@@ -217,7 +241,10 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
     protected function resolveAttributeValueChildArrayKeyByAttributeId(int $attributeId, array $children): int
     {
         foreach ($children as $key => $attributeValueResult) {
-            if ((int)$attributeValueResult['databaseRow']['attribute'][0]['uid'] === $attributeId) {
+            if (!is_array($attributeValueResult)) {
+                continue;
+            }
+            if ((int)TcaUtility::getAttributeUid($attributeValueResult['databaseRow']['attribute'] ?? 0) === $attributeId) {
                 return (int)$key;
             }
         }
@@ -234,7 +261,7 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
      */
     protected function updateAttributeValues(array $result, array $children): array
     {
-        $productLanguageFieldName = $GLOBALS['TCA'][ProductRepository::TABLE_NAME]['ctrl']['languageField'];
+        $productLanguageFieldName = $GLOBALS['TCA'][ProductRepository::TABLE_NAME]['ctrl']['languageField'] ?? 'sys_language_uid';
         $sysLanguageUid = isset(
             $result['databaseRow'][$productLanguageFieldName]['0']
         ) ? (int)$result['databaseRow'][$productLanguageFieldName]['0'] : 0;
@@ -242,10 +269,15 @@ class NewAttributeRelationRecordsDataProvider implements FormDataProviderInterfa
         $attrLangField = $GLOBALS['TCA'][AttributeRepository::TABLE_NAME]['ctrl']['languageField'] ?? null;
 
         foreach ($children as $key => $attributeValueResult) {
+            if (!is_array($attributeValueResult)) {
+                continue;
+            }
             // Make sure attributevalue has same language as edited product.
-            if (
+            if (is_string($attrLangField)
+                && (
                 isset($attributeValueResult['databaseRow'][$attrLangField][0])
                 && (int)$attributeValueResult['databaseRow'][$attrLangField][0] !== $sysLanguageUid
+                )
             ) {
                 $children[$key]['databaseRow'][$attrLangField][0] = (string)$sysLanguageUid;
             }

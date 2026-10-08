@@ -25,7 +25,7 @@ class TreeService
      *
      * @param FrontendInterface|null $cache
      */
-    public function __construct(FrontendInterface $cache = null)
+    public function __construct(?FrontendInterface $cache = null)
     {
         $this->cache = $cache ?? GeneralUtility::makeInstance(CacheManager::class)->getCache('pm_cache_categories');
     }

@@ -33,8 +33,10 @@ use Pixelant\PxaProductManager\Domain\Collection\CanCreateCollection;
 use Pixelant\PxaProductManager\Domain\Repository\ProductRepository;
 use Pixelant\PxaProductManager\Formatter\PriceFormatter;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Extbase\Attribute\ORM\Cascade;
+use TYPO3\CMS\Extbase\Attribute\ORM\Lazy;
+use TYPO3\CMS\Extbase\Attribute\ORM\Transient;
 use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Persistence\Generic\LazyLoadingProxy;
 use TYPO3\CMS\Extbase\Persistence\ObjectStorage;
 
@@ -49,12 +51,8 @@ class Product extends AbstractEntity
     /**
      * @var UpdaterInterface
      */
-    protected UpdaterInterface $attributeValueUpdater;
+    protected ?UpdaterInterface $attributeValueUpdater = null;
 
-    /**
-     * @var ObjectManager
-     */
-    protected ObjectManager $objectManager;
 
     /**
      * @var string
@@ -127,82 +125,82 @@ class Product extends AbstractEntity
     protected $productType = null;
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\Pixelant\PxaProductManager\Domain\Model\Category>
      */
+    #[Lazy]
     protected ObjectStorage $categories;
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
      * @var Product|null
      */
+    #[Lazy]
     protected $parent = null;
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Transient
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\Pixelant\PxaProductManager\Domain\Model\Product>
      */
+    #[Lazy]
+    #[Transient]
     protected ?ObjectStorage $children = null;
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\Pixelant\PxaProductManager\Domain\Model\Product>
      */
+    #[Lazy]
     protected ObjectStorage $relatedProducts;
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\Pixelant\PxaProductManager\Domain\Model\Product>
      */
+    #[Lazy]
     protected ObjectStorage $accessories;
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Cascade("remove")
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\Pixelant\PxaProductManager\Domain\Model\Image>
      */
+    #[Lazy]
+    #[Cascade('remove')]
     protected ObjectStorage $images;
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Cascade("remove")
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\Pixelant\PxaProductManager\Domain\Model\AttributeFile>
      */
+    #[Lazy]
+    #[Cascade('remove')]
     protected ObjectStorage $attributesFiles;
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Cascade("remove")
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\Pixelant\PxaProductManager\Domain\Model\Link>
      */
+    #[Lazy]
+    #[Cascade('remove')]
     protected ObjectStorage $links;
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Cascade("remove")
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\TYPO3\CMS\Extbase\Domain\Model\FileReference>
      */
+    #[Lazy]
+    #[Cascade('remove')]
     protected ObjectStorage $falLinks;
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Cascade("remove")
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\TYPO3\CMS\Extbase\Domain\Model\FileReference>
      */
+    #[Lazy]
+    #[Cascade('remove')]
     protected ObjectStorage $assets;
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Cascade("remove")
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\Pixelant\PxaProductManager\Domain\Model\AttributeValue>
      */
+    #[Lazy]
+    #[Cascade('remove')]
     protected ObjectStorage $attributesValues;
 
     /**
-     * @TYPO3\CMS\Extbase\Annotation\ORM\Lazy
      * @var \TYPO3\CMS\Extbase\Persistence\ObjectStorage<\Pixelant\PxaProductManager\Domain\Model\Page>
      */
+    #[Lazy]
     protected ObjectStorage $singleviewPage;
 
     /**
@@ -227,13 +225,6 @@ class Product extends AbstractEntity
         $this->__construct();
     }
 
-    /**
-     * @param ObjectManager $objectManager
-     */
-    public function injectObjectManager(ObjectManager $objectManager): void
-    {
-        $this->objectManager = $objectManager;
-    }
 
     /**
      * @param UpdaterInterface $attributeValueUpdater
@@ -318,7 +309,7 @@ class Product extends AbstractEntity
      */
     public function getFormattedPrice(): string
     {
-        return $this->objectManager->get(PriceFormatter::class)->format($this);
+        return GeneralUtility::makeInstance(PriceFormatter::class)->format($this);
     }
 
     /**
@@ -599,7 +590,7 @@ class Product extends AbstractEntity
     {
         if ($this->children === null) {
             /** @var ProductRepository $productRepository */
-            $productRepository = $this->objectManager->get(ProductRepository::class);
+            $productRepository = GeneralUtility::makeInstance(ProductRepository::class);
             $query = $productRepository->createQuery();
             // Child products should always be connected to "default" parent product even if localized.
             $children = $query->matching($query->equals('parent', $this->getUid()))->execute();
@@ -936,9 +927,9 @@ class Product extends AbstractEntity
     }
 
     /**
-     * @return ProductType
+     * @return ProductType|null
      */
-    public function getProductType(): ProductType
+    public function getProductType(): ?ProductType
     {
         return $this->productType;
     }
@@ -978,7 +969,7 @@ class Product extends AbstractEntity
      */
     public function updateAttributeValue(Attribute $attribute, $value): void
     {
-        $this->attributeValueUpdater->update($this, $attribute, $value);
+        ($this->attributeValueUpdater ??= GeneralUtility::makeInstance(UpdaterInterface::class))->update($this, $attribute, $value);
     }
 
     /**

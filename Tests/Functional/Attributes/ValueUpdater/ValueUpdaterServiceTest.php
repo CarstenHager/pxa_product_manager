@@ -10,7 +10,6 @@ use Pixelant\PxaProductManager\Domain\Repository\AttributeValueRepository;
 use Pixelant\PxaProductManager\Tests\Utility\TestsUtility;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 
 class ValueUpdaterServiceTest extends FunctionalTestCase
 {
@@ -28,7 +27,7 @@ class ValueUpdaterServiceTest extends FunctionalTestCase
     {
         parent::setUp();
 
-        $this->subject = GeneralUtility::makeInstance(ObjectManager::class)->get(ValueUpdaterService::class);
+        $this->subject = GeneralUtility::makeInstance(ValueUpdaterService::class);
         $this->importDataSet(__DIR__ . '/../../../Fixtures/attributevalue.xml');
     }
 
@@ -44,8 +43,7 @@ class ValueUpdaterServiceTest extends FunctionalTestCase
 
         $this->subject->update($product, $attribute, $newValue);
 
-        $attributeValue = GeneralUtility::makeInstance(ObjectManager::class)
-            ->get(AttributeValueRepository::class)
+        $attributeValue = GeneralUtility::makeInstance(AttributeValueRepository::class)
             ->findByUid(20);
 
         self::assertEquals($newValue, $attributeValue->getValue());
@@ -74,8 +72,8 @@ class ValueUpdaterServiceTest extends FunctionalTestCase
             ->from('tx_pxaproductmanager_domain_model_attributevalue')
             ->setMaxResults(1)
             ->orderBy('uid', 'desc')
-            ->execute()
-            ->fetch();
+            ->executeQuery()
+            ->fetchAssociative();
 
         self::assertEquals($newValue, $attributeValueRow['value']);
         self::assertEquals($productUid, $attributeValueRow['product']);
@@ -100,7 +98,7 @@ class ValueUpdaterServiceTest extends FunctionalTestCase
         );
 
         $newValue = '2';
-        $expectValue = ",${newValue},";
+        $expectValue = ",{$newValue},";
 
         $this->subject->update($product, $attribute, $newValue);
 
@@ -112,8 +110,8 @@ class ValueUpdaterServiceTest extends FunctionalTestCase
             ->from('tx_pxaproductmanager_domain_model_attributevalue')
             ->setMaxResults(1)
             ->orderBy('uid', 'desc')
-            ->execute()
-            ->fetch();
+            ->executeQuery()
+            ->fetchAssociative();
 
         self::assertEquals($expectValue, $attributeValueRow['value'], 'given value: ' . $attributeValueRow['value']);
         self::assertEquals($productUid, $attributeValueRow['product']);

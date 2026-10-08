@@ -3,9 +3,7 @@
 namespace Pixelant\PxaProductManager\ViewHelpers;
 
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
-use TYPO3Fluid\Fluid\Core\ViewHelper\Traits\CompileWithRenderStatic;
 
 /*
  *
@@ -33,8 +31,6 @@ use TYPO3Fluid\Fluid\Core\ViewHelper\Traits\CompileWithRenderStatic;
  */
 class SvgViewHelper extends AbstractViewHelper
 {
-    use CompileWithRenderStatic;
-
     /**
      * @var bool
      */
@@ -63,21 +59,13 @@ class SvgViewHelper extends AbstractViewHelper
     }
 
     /**
-     * Prepare svg output.
-     *
-     * @param array $arguments
-     * @param \Closure $renderChildrenClosure
-     * @param RenderingContextInterface $renderingContext
-     *
-     * @return string svg content
+     * Prepare SVG output.
      */
-    public static function renderStatic(
-        array $arguments,
-        \Closure $renderChildrenClosure,
-        RenderingContextInterface $renderingContext
-    ) {
-        $relativeSrc = $arguments['src'] ?? ltrim($arguments['source'], '/') ?? '';
-        $extension = $arguments['fileExtension'] ?? '';
+    public function render(): string
+    {
+        $relativeSrc = $this->arguments['src'] ?? ltrim((string)($this->arguments['source'] ?? ''), '/');
+        $extension = $this->arguments['fileExtension'] ?? '';
+        $absoluteSrc = '';
 
         if (empty($relativeSrc) && empty($extension)) {
             return '<!-- nothing to render -->';
@@ -106,7 +94,7 @@ class SvgViewHelper extends AbstractViewHelper
             }
         }
 
-        return self::getInlineSvg($absoluteSrc, $arguments);
+        return self::getInlineSvg($absoluteSrc, $this->arguments);
     }
 
     /**
@@ -120,7 +108,10 @@ class SvgViewHelper extends AbstractViewHelper
     protected static function getInlineSvg(string $absoluteSrc, array $arguments): string
     {
         // Load svg content.
-        $svgContent = GeneralUtility::getUrl($absoluteSrc);
+        $svgContent = (string)(GeneralUtility::getUrl($absoluteSrc) ?: '');
+        if ($svgContent === '') {
+            return '<!-- unable to render SVG: empty file -->';
+        }
 
         // Try and remove script tags.
         $svgContent = preg_replace('/<script[\s\S]*?>[\s\S]*?<\/script>/i', '', $svgContent);
@@ -139,8 +130,15 @@ class SvgViewHelper extends AbstractViewHelper
             libxml_disable_entity_loader($previousValueOfEntityLoader); // phpcs:disable
         }
 
+        if ($svgElement === false) {
+            return '<!-- unable to render SVG: invalid XML -->';
+        }
+
         // Remove xml version tag.
         $domXml = dom_import_simplexml($svgElement);
+        if (!$domXml instanceof \DOMElement || $domXml->ownerDocument === null) {
+            return '<!-- unable to render SVG: invalid document -->';
+        }
 
         self::setElementAttributes($domXml, $arguments);
 
